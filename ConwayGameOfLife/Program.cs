@@ -8,7 +8,7 @@ namespace ConwayGameOfLife
         private static void Main()
         {
             Console.WriteLine();
-            using (var game = new Game1())
+            using (var game = new Game1())//added this
                 game.Run();
         }
     }
