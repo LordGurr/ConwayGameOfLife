@@ -31,11 +31,11 @@ namespace ConwayGameOfLife
             ypos = _ypos;
         }
 
-        public override bool Clicked()
+        public bool Clicked(Vector2 mousePos)
         {
             if (Input.GetMouseButtonDown(0))
             {
-                if (rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y))
+                if (rectangle.Contains(mousePos))
                 {
                     alive = !alive;
                     if (alive)
@@ -51,7 +51,7 @@ namespace ConwayGameOfLife
             }
             else if (Input.GetMouseButton(0))
             {
-                if (rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y))
+                if (rectangle.Contains(mousePos))
                 {
                     alive = Input.mouseClickingToAlive;
                     if (alive)

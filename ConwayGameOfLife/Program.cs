@@ -7,7 +7,7 @@ namespace ConwayGameOfLife
         [STAThread]
         private static void Main()
         {
-            Console.WriteLine();
+            Console.WriteLine("Hjälp mig");
             using (var game = new Game1())
                 game.Run();
         }

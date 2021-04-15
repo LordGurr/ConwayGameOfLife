@@ -23,6 +23,11 @@ namespace ConwayGameOfLife
         private DataTable dt = new DataTable();
         private Button next;
         private Button clear;
+        private Camera camera;
+        private Vector2 muspositionTillWorldPåKlick = new Vector2();
+        public static Vector2 screenSize { get; private set; }
+        private int tilesPåverkadeSenast = 0;
+        private Vector2 position;
 
         public Game1()
         {
@@ -33,6 +38,9 @@ namespace ConwayGameOfLife
             _graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
             _graphics.IsFullScreen = true;
             _graphics.ApplyChanges();
+            camera = new Camera(new Viewport(new Rectangle(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight)));
+            screenSize = new Vector2(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
+            position = new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
         }
 
         protected override void Initialize()
@@ -44,7 +52,6 @@ namespace ConwayGameOfLife
             DataColumn[] keys = new DataColumn[1];
             keys[0] = dt.Columns[0];
             dt.PrimaryKey = keys;
-
             base.Initialize();
         }
 
@@ -63,15 +70,15 @@ namespace ConwayGameOfLife
             bool addedX = false;
             int xpos = 4;
             int ypos = 10;
-            for (int a = 0; a < _graphics.PreferredBackBufferHeight; a += widthOfSingleCollisionSquare)
+            for (int a = -_graphics.PreferredBackBufferHeight; a < _graphics.PreferredBackBufferHeight * 2; a += widthOfSingleCollisionSquare)
             {
-                for (int i = 0; i < _graphics.PreferredBackBufferWidth; i += widthOfSingleCollisionSquare)
+                for (int i = -_graphics.PreferredBackBufferWidth; i < _graphics.PreferredBackBufferWidth * 2; i += widthOfSingleCollisionSquare)
                 {
-                    knapparna.Add(new Tile(new Rectangle(i, a, widthOfSingleCollisionSquare, widthOfSingleCollisionSquare), debug, aliveBox, i / widthOfSingleCollisionSquare, a / widthOfSingleCollisionSquare));
+                    knapparna.Add(new Tile(new Rectangle(i, a, widthOfSingleCollisionSquare, widthOfSingleCollisionSquare), debug, aliveBox, (i + _graphics.PreferredBackBufferWidth) / widthOfSingleCollisionSquare, (a + _graphics.PreferredBackBufferHeight) / widthOfSingleCollisionSquare));
                     DataRow tempRow = dt.NewRow();
                     tempRow[0] = knapparna.Count - 1;
-                    tempRow[1] = i / widthOfSingleCollisionSquare;
-                    tempRow[2] = a / widthOfSingleCollisionSquare;
+                    tempRow[1] = (i + _graphics.PreferredBackBufferWidth) / widthOfSingleCollisionSquare;
+                    tempRow[2] = (a + _graphics.PreferredBackBufferHeight) / widthOfSingleCollisionSquare;
                     dt.Rows.Add(tempRow);
                     //dt.Rows.Add(knapparna.Count - 1, i, a);
                     if (!addedX)
@@ -99,66 +106,112 @@ namespace ConwayGameOfLife
                 {
                     _graphics.IsFullScreen = false;
                     _graphics.ApplyChanges();
+                    screenSize = new Vector2(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
                 }
             }
             bool buttonClicked = false;
             if (next.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || fullscreen.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || clear.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y))
             {
                 buttonClicked = true;
-            }
-            if (next.Clicked())
-            {
-                List<Tile> tilesPåverkade = new List<Tile>();
-                List<Tile> levandeTiles = knapparna.FindAll(x => x.alive);
-                tilesPåverkade.AddRange(levandeTiles);
-                for (int i = 0; i < levandeTiles.Count; i++)
+                if (next.Clicked())
                 {
-                    List<Tile> rutorBredvid = tilesBredvid(levandeTiles[i]);
-                    tilesPåverkade.AddRange(rutorBredvid);
-                    levandeTiles[i].SetAlive(rutorBredvid.FindAll(x => x.alive).Count);
-                    List<Tile> dödaTiles = rutorBredvid.FindAll(x => !x.alive);
-                    tilesPåverkade.AddRange(dödaTiles);
-                    for (int a = 0; a < dödaTiles.Count; a++)
+                    try
                     {
-                        List<Tile> rutorBredvidDöda = tilesBredvid(dödaTiles[a]);
-                        tilesPåverkade.AddRange(rutorBredvidDöda);
-                        dödaTiles[a].SetAlive(rutorBredvidDöda.FindAll(x => x.alive).Count);
+                        List<Tile> tilesPåverkade = new List<Tile>();
+                        List<Tile> levandeTiles = knapparna.FindAll(x => x.alive);
+                        tilesPåverkade.AddRange(levandeTiles);
+                        for (int i = 0; i < levandeTiles.Count; i++)
+                        {
+                            List<Tile> rutorBredvid = tilesBredvid(levandeTiles[i]);
+                            tilesPåverkade.AddRange(rutorBredvid);
+                            levandeTiles[i].SetAlive(rutorBredvid.FindAll(x => x.alive).Count);
+                            List<Tile> dödaTiles = rutorBredvid.FindAll(x => !x.alive);
+                            for (int a = 0; a < dödaTiles.Count; a++)
+                            {
+                                if (tilesPåverkade.Contains(dödaTiles[a]))
+                                {
+                                    dödaTiles.RemoveAt(a);
+                                }
+                            }
+                            tilesPåverkade.AddRange(dödaTiles);
+                            for (int a = 0; a < dödaTiles.Count; a++)
+                            {
+                                List<Tile> rutorBredvidDöda = tilesBredvid(dödaTiles[a]);
+                                tilesPåverkade.AddRange(rutorBredvidDöda);
+                                dödaTiles[a].SetAlive(rutorBredvidDöda.FindAll(x => x.alive).Count);
+                            }
+                        }
+                        for (int i = 0; i < tilesPåverkade.Count; i++)
+                        {
+                            tilesPåverkade[i].UpdateAlive();
+                        }
+                        tilesPåverkadeSenast = tilesPåverkade.Count;
+                    }
+                    catch (System.Exception e)
+                    {
+                        string temp = e.Message;
                     }
                 }
-                for (int i = 0; i < tilesPåverkade.Count; i++)
+                if (clear.Clicked())
                 {
-                    tilesPåverkade[i].UpdateAlive();
+                    List<Tile> levandeTiles = knapparna.FindAll(x => x.alive);
+                    for (int i = 0; i < levandeTiles.Count; i++)
+                    {
+                        levandeTiles[i].SetAlive(false);
+                        levandeTiles[i].UpdateAlive();
+                    }
                 }
-            }
-            if (clear.Clicked())
-            {
-                List<Tile> levandeTiles = knapparna.FindAll(x => x.alive);
-                for (int i = 0; i < levandeTiles.Count; i++)
-                {
-                    levandeTiles[i].SetAlive(false);
-                    levandeTiles[i].UpdateAlive();
-                }
-            }
 
-            // TODO: Add your update logic here
-            if (fullscreen.Clicked())
-            {
-                //fullscreen.setPos(GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width - buttonStart.rectangle.Width, 0);
-                //_graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
-                //_graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
-                _graphics.IsFullScreen = !_graphics.IsFullScreen;
-                _graphics.ApplyChanges();
-            }
-            if (!buttonClicked)
-            {
-                for (int i = 0; i < knapparna.Count; i++)
+                // TODO: Add your update logic here
+                if (fullscreen.Clicked())
                 {
-                    bool temp = knapparna[i].Clicked();
-                    if (temp)
+                    //fullscreen.setPos(GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width - buttonStart.rectangle.Width, 0);
+                    //_graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+                    //_graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
+                    _graphics.IsFullScreen = !_graphics.IsFullScreen;
+                    _graphics.ApplyChanges();
+                    screenSize = new Vector2(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
+                }
+            }
+            //camera.UpdateCamera(position);
+            if (position + camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)) == muspositionTillWorldPåKlick)
+            {
+            }
+            camera.UpdateCamera(position + (Input.GetMouseButton(2) ? Vector2.Subtract(camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)), muspositionTillWorldPåKlick) : new Vector2()));
+            Vector3 cameraPos = camera.transform.Translation;
+            if (Input.GetButton(Keys.PageDown))
+            {
+                camera.Zoom -= 0.01f;
+            }
+            else if (Input.GetButton(Keys.PageUp))
+            {
+                camera.Zoom += 0.01f;
+            }
+            camera.Zoom = (float)(Input.clampedScrollWheelValue * 0.001) + 1;
+            if (Input.GetMouseButtonDown(2))
+            {
+                muspositionTillWorldPåKlick = camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y));
+            }
+            if (Input.GetMouseButton(2))
+            {
+            }
+            if (!buttonClicked || Input.GetMouseButton(0))
+            {
+                try
+                {
+                    for (int i = 0; i < knapparna.Count; i++)
                     {
-                        Input.mouseClickingToAlive = knapparna[i].alive;
-                        break;
+                        bool temp = knapparna[i].Clicked(camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)));
+                        if (temp)
+                        {
+                            Input.mouseClickingToAlive = knapparna[i].alive;
+                            break;
+                        }
                     }
+                }
+                catch (System.Exception e)
+                {
+                    string temp = e.Message;
                 }
             }
             base.Update(gameTime);
@@ -219,18 +272,32 @@ namespace ConwayGameOfLife
 
         protected override void Draw(GameTime gameTime)
         {
-            _spriteBatch.Begin(SpriteSortMode.Deferred, null, SamplerState.PointClamp);
+            _spriteBatch.Begin(SpriteSortMode.Deferred, null, SamplerState.PointClamp, transformMatrix: camera.transform);
             GraphicsDevice.Clear(Color.DarkGray);
             for (int i = 0; i < knapparna.Count; i++)
             {
                 knapparna[i].Draw(_spriteBatch, font);
-                if (debugging)
-                    _spriteBatch.DrawString(font, "i: " + i, new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 3), Color.White);
             }
+            if (debugging)
+            {
+                for (int i = 0; i < knapparna.Count; i++)
+                {
+                    _spriteBatch.DrawString(font, "i: " + i, new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 3), Color.Black);
+                }
+            }
+            Vector3 cameraPos = camera.transform.Translation;
             // TODO: Add your drawing code here
+            _spriteBatch.End();
+            _spriteBatch.Begin(SpriteSortMode.Deferred, null, SamplerState.PointClamp);
             fullscreen.Draw(_spriteBatch, font);
             next.Draw(_spriteBatch, font);
             clear.Draw(_spriteBatch, font);
+            if (debugging)
+            {
+                _spriteBatch.DrawString(font, "position: " + position.ToString(), new Vector2(5, 5), Color.Black);
+                _spriteBatch.DrawString(font, "musklickpos: " + muspositionTillWorldPåKlick.ToString(), new Vector2(5, 25), Color.Black);
+                _spriteBatch.DrawString(font, "musworldpos: " + camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)).ToString(), new Vector2(5, 45), Color.Black);
+            }
             _spriteBatch.End();
             base.Draw(gameTime);
         }

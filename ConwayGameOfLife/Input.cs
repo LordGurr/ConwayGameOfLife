@@ -17,6 +17,11 @@ namespace ConwayGameOfLife
 
         private static MouseState currentMouseState;
         private static MouseState previousMouseState;
+
+        private static int currentscrollWheelValue;
+        private static int previousscrollWheelValue;
+        public static int clampedScrollWheelValue { private set; get; }
+        public static int differenceScrollWheelValue { private set; get; }
         public static Vector2 directional { private set; get; }
         public static Vector2 normalizedDirectional { private set; get; }
 
@@ -30,6 +35,17 @@ namespace ConwayGameOfLife
 
             previousMouseState = currentMouseState;
             currentMouseState = Microsoft.Xna.Framework.Input.Mouse.GetState();
+
+            previousscrollWheelValue = currentscrollWheelValue;
+            currentscrollWheelValue = Mouse.GetState().ScrollWheelValue;
+
+            differenceScrollWheelValue = currentscrollWheelValue - previousscrollWheelValue;
+            if (Math.Abs(differenceScrollWheelValue) > 10)
+            {
+            }
+
+            clampedScrollWheelValue += differenceScrollWheelValue;
+            clampedScrollWheelValue = MathHelper.Clamp(clampedScrollWheelValue, -720, 1680);
             //Vector2 input = new Vector2();
             directional = new Vector2();
             directional += new Vector2(0, GamePad.GetState(PlayerIndex.One).DPad.Down == ButtonState.Pressed ? 1 : 0);
@@ -45,7 +61,6 @@ namespace ConwayGameOfLife
             directional += new Vector2(GetButton(Keys.Right) || GetButton(Keys.D) ? 1 : 0, 0);
             directional = new Vector2(Math.Clamp(directional.X, -1, 1), Math.Clamp(directional.Y, -1, 1));
             normalizedDirectional = AdvancedMath.ClampMagnitude(directional, 1);
-
             return currentKeyState;
         }
 
