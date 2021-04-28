@@ -24,14 +24,16 @@ namespace ConwayGameOfLife
         private bool debugging = false;
         private DataTable dt = new DataTable();
         private Button next;
+        private Button play;
         private Button clear;
         private Camera camera;
-        private Vector2 muspositionTillWorldPåKlick = new Vector2();
         public static Vector2 screenSize { get; private set; }
         private int tilesPåverkadeSenast = 0;
         private Vector2 position;
         private Vector2 previousMousePos;
         private bool monitorSwitch = false;
+
+        private Stopwatch timeSinceIteration;
 
         public Game1()
         {
@@ -46,6 +48,8 @@ namespace ConwayGameOfLife
             screenSize = new Vector2(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
             position = new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
             previousMousePos = camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y));
+            timeSinceIteration = new Stopwatch();
+            timeSinceIteration.Start();
         }
 
         protected override void Initialize()
@@ -71,7 +75,9 @@ namespace ConwayGameOfLife
             next = new Button(new Rectangle(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2, 160, 40), aliveBox, "Next");
             next.setPos(_graphics.PreferredBackBufferWidth / 2 - next.rectangle.Width / 2, _graphics.PreferredBackBufferHeight - next.rectangle.Height * 2);
             clear = new Button(new Rectangle(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2, 160, 40), aliveBox, "Clear");
-            clear.setPos((int)((_graphics.PreferredBackBufferWidth / 2) + clear.rectangle.Width * 0.6f), _graphics.PreferredBackBufferHeight - next.rectangle.Height * 2);
+            clear.setPos((int)Math.Round((_graphics.PreferredBackBufferWidth / 2) + clear.rectangle.Width * 0.6f), _graphics.PreferredBackBufferHeight - next.rectangle.Height * 2);
+            play = new Button(new Rectangle(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2, 160, 40), aliveBox, "Play");
+            play.setPos((int)Math.Round(_graphics.PreferredBackBufferWidth / 2 - next.rectangle.Width * 1.6f), _graphics.PreferredBackBufferHeight - next.rectangle.Height * 2);
             bool addedX = false;
             int xpos = 4;
             int ypos = 10;
@@ -111,7 +117,9 @@ namespace ConwayGameOfLife
                     screenSize = new Vector2(Window.ClientBounds.Width, Window.ClientBounds.Height);
                     fullscreen.setPos(Window.ClientBounds.Width - fullscreen.rectangle.Width, 0);
                     next.setPos(Window.ClientBounds.Width / 2 - next.rectangle.Width / 2, Window.ClientBounds.Height - next.rectangle.Height * 2);
-                    clear.setPos((int)((Window.ClientBounds.Width / 2) + clear.rectangle.Width * 0.6f), Window.ClientBounds.Height - next.rectangle.Height * 2);
+                    clear.setPos((int)Math.Round((Window.ClientBounds.Width / 2) + clear.rectangle.Width * 0.6f), Window.ClientBounds.Height - next.rectangle.Height * 2);
+                    play.setPos((int)Math.Round(Window.ClientBounds.Width / 2 - next.rectangle.Width * 1.6f), Window.ClientBounds.Height - next.rectangle.Height * 2);
+
                     monitorSwitch = false;
                 }
                 Input.GetState();
@@ -128,7 +136,7 @@ namespace ConwayGameOfLife
                     }
                 }
                 bool buttonClicked = false;
-                if (next.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || fullscreen.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || clear.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y))
+                if (next.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || fullscreen.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || clear.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || play.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y))
                 {
                     buttonClicked = true;
                     if (next.Clicked())
@@ -157,20 +165,20 @@ namespace ConwayGameOfLife
                     }
                 }
                 //camera.UpdateCamera(position);
-                if (Input.GetMouseButtonDown(2))
-                {
-                    muspositionTillWorldPåKlick = camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y));
-                }
+                //if (Input.GetMouseButtonDown(2))
+                //{
+                //    muspositionTillWorldPåKlick = camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y));
+                //}
 
-                Vector2 mousePos = camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y));
-                Vector3 cameraPos = camera.transform.Translation;
-                Vector2 musDiff = previousMousePos - camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y));
-                if (WithinRange(muspositionTillWorldPåKlick - mousePos, muspositionTillWorldPåKlick, 20))
-                {
-                }
-                if ((mousePos - muspositionTillWorldPåKlick) + camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)) == muspositionTillWorldPåKlick)
-                {
-                }
+                //Vector2 mousePos = camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y));
+                //Vector3 cameraPos = camera.transform.Translation;
+                //Vector2 musDiff = previousMousePos - camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y));
+                //if (WithinRange(muspositionTillWorldPåKlick - mousePos, muspositionTillWorldPåKlick, 20))
+                //{
+                //}
+                //if ((mousePos - muspositionTillWorldPåKlick) + camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)) == muspositionTillWorldPåKlick)
+                //{
+                //}
                 if (Input.GetButton(Keys.PageDown))
                 {
                     camera.Zoom -= 0.01f;
@@ -181,16 +189,17 @@ namespace ConwayGameOfLife
                 }
                 camera.Zoom = (float)(Input.clampedScrollWheelValue * 0.001) + 1;
 
-                if (Input.GetMouseButton(2))
-                {
-                    position += musDiff;
-                }
+                //if (Input.GetMouseButton(2))
+                //{
+                //    position += new Vector2((float)musDiff.X, (float)musDiff.Y);
+                //}
                 //camera.UpdateCamera((Input.GetMouseButton(2) ? position + musDiff : position));
+                UpdateMouse(gameTime);
                 camera.UpdateCamera((position));
                 if (Input.GetMouseButtonUp(2))
                 {
                 }
-                previousMousePos = mousePos;
+                //previousMousePos = mousePos;
                 if (!buttonClicked || Input.GetMouseButton(0))
                 {
                     try
@@ -214,10 +223,37 @@ namespace ConwayGameOfLife
             }
         }
 
+        private MouseState mouse;
+        private Vector2 mouseDelta;
+        private Vector2 lastMousePosition;
+        private bool enableMouseDragging;
+
+        private void UpdateMouse(GameTime gameTime)
+        {
+            if (Input.GetMouseButtonDown(2) && !enableMouseDragging)
+                enableMouseDragging = true;
+            else if (Input.GetMouseButtonUp(2) && enableMouseDragging)
+                enableMouseDragging = false;
+
+            if (enableMouseDragging)
+            {
+                Vector2 delta = lastMousePosition - Input.MousePos();
+
+                if (delta != Vector2.Zero)
+                {
+                    position += delta / camera.Zoom;
+                    mouseDelta = delta;
+                }
+            }
+
+            lastMousePosition = Input.MousePos();
+        }
+
         private void Iterate()
         {
             try
             {
+                timeSinceIteration.Restart();
                 List<Tile> tilesPåverkade = new List<Tile>();
                 List<Tile> levandeTiles = knapparna.FindAll(x => x.alive);
                 tilesPåverkade.AddRange(levandeTiles);
@@ -340,18 +376,99 @@ namespace ConwayGameOfLife
             _spriteBatch.Begin(SpriteSortMode.Deferred, null, SamplerState.PointClamp);
             fullscreen.Draw(_spriteBatch, font);
             next.Draw(_spriteBatch, font);
+            play.Draw(_spriteBatch, font);
             clear.Draw(_spriteBatch, font);
             if (debugging)
             {
-                _spriteBatch.DrawString(font, "position: " + position.ToString(), new Vector2(5, 5), Color.Black);
-                _spriteBatch.DrawString(font, "musklickpos: " + muspositionTillWorldPåKlick.ToString(), new Vector2(5, 25), Color.Black);
-                _spriteBatch.DrawString(font, "musworldpos: " + camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)).ToString(), new Vector2(5, 45), Color.Black);
-                _spriteBatch.DrawString(font, "musdiff: " + (muspositionTillWorldPåKlick - camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y))).ToString(), new Vector2(5, 65), Color.Black);
-                _spriteBatch.DrawString(font, "Actualmusdiff: " + (previousMousePos - camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y))).ToString(), new Vector2(5, 85), Color.Black);
-                _spriteBatch.DrawString(font, "tilesUpdated: " + (tilesPåverkadeSenast).ToString(), new Vector2(5, 105), Color.Black);
+                float size = 1.6f;
+                _spriteBatch.DrawString(font, "position: " + position.ToString(), new Vector2(5, 5), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                //_spriteBatch.DrawString(font, "musklickpos: " + muspositionTillWorldPåKlick.ToString(), new Vector2(5, 25), Color.Black);
+                //_spriteBatch.DrawString(font, "musworldpos: " + camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)).ToString(), new Vector2(5, 45), Color.Black);
+                //_spriteBatch.DrawString(font, "musdiff: " + (muspositionTillWorldPåKlick - camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y))).ToString(), new Vector2(5, 65), Color.Black);
+                //_spriteBatch.DrawString(font, "Actualmusdiff: " + (previousMousePos - camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y))).ToString(), new Vector2(5, 85), Color.Black);
+                _spriteBatch.DrawString(font, "tilesUpdated: " + (tilesPåverkadeSenast).ToString(), new Vector2(5, 25), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(font, "timesinceIterate: " + (timeSinceIteration).Elapsed.ToString(), new Vector2(5, 45), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(font, "zoom: " + (camera.Zoom).ToString(), new Vector2(5, 65), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(font, "scrollWheel: " + (Input.clampedScrollWheelValue).ToString(), new Vector2(5, 85), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
             }
             _spriteBatch.End();
             base.Draw(gameTime);
+        }
+    }
+
+    internal class Vector2Dec
+    {
+        public decimal X;
+        public decimal Y;
+
+        public Vector2Dec()
+        {
+            X = 0;
+            Y = 0;
+        }
+
+        public Vector2Dec(decimal _x)
+        {
+            X = _x;
+            Y = 0;
+        }
+
+        public Vector2Dec(decimal _x, decimal _y)
+        {
+            X = _x;
+            Y = _y;
+        }
+
+        public static void Transform(ref Vector2Dec position, ref Matrix matrix, out Vector2Dec result)
+        {
+            var x = (position.X * (decimal)matrix.M11) + (position.Y * (decimal)matrix.M21) + (decimal)matrix.M41;
+            var y = (position.X * (decimal)matrix.M12) + (position.Y * (decimal)matrix.M22) + (decimal)matrix.M42;
+            result = new Vector2Dec();
+            result.X = x;
+            result.Y = y;
+        }
+
+        public static Vector2Dec Transform(Vector2Dec position, Matrix matrix)
+        {
+            var x = (position.X * (decimal)matrix.M11) + (position.Y * (decimal)matrix.M21) + (decimal)matrix.M41;
+            var y = (position.X * (decimal)matrix.M12) + (position.Y * (decimal)matrix.M22) + (decimal)matrix.M42;
+            Vector2Dec result = new Vector2Dec();
+            result.X = x;
+            result.Y = y;
+            return result;
+        }
+
+        public static Vector2Dec operator -(Vector2Dec value1, Vector2Dec value2)
+        {
+            Vector2Dec result = new Vector2Dec();
+            result.X = value1.X - value2.X;
+            result.Y = value1.Y - value2.Y;
+            return value1;
+        }
+
+        public static Vector2Dec operator +(Vector2Dec value1, Vector2Dec value2)
+        {
+            Vector2Dec result = new Vector2Dec();
+            result.X = value1.X + value2.X;
+            result.Y = value1.Y + value2.Y;
+            return value1;
+        }
+
+        public static Vector2Dec operator *(Vector2Dec value1, Vector2Dec value2)
+        {
+            Vector2Dec result = new Vector2Dec();
+
+            result.X = value1.X * value2.X;
+            result.Y = value1.Y * value2.Y;
+            return value1;
+        }
+
+        public static Vector2Dec operator /(Vector2Dec value1, Vector2Dec value2)
+        {
+            Vector2Dec result = new Vector2Dec();
+            result.X = value1.X / value2.X;
+            result.Y = value1.Y / value2.Y;
+            return value1;
         }
     }
 }

@@ -81,5 +81,25 @@ namespace ConwayGameOfLife
             //Matrix.CreateScale(Zoom, Zoom, 0) *
             //Matrix.CreateTranslation(viewport.Width / 2, viewport.Height / 2, 0);
         }
+
+        public Vector2Dec ScreenToWorldSpace(in Vector2Dec point)
+        {
+            try
+            {
+                Matrix invertedMatrix = Matrix.Invert(transform);
+                return Vector2Dec.Transform(point, invertedMatrix);
+            }
+            catch (Exception e)
+            {
+                //Vector2 temp = ScreenToWorldSpace(new Vector2((float)point.X, (float)point.Y));
+                //return new Vector2Dec((decimal)temp.X, (decimal)temp.Y);
+                return point;
+            }
+            //        return
+            //Matrix.CreateTranslation(new Vector3(centre.X, centre.Y, 0f)) *
+
+            //Matrix.CreateScale(Zoom, Zoom, 0) *
+            //Matrix.CreateTranslation(viewport.Width / 2, viewport.Height / 2, 0);
+        }
     }
 }

@@ -144,5 +144,10 @@ namespace ConwayGameOfLife
             }
             return false;
         }
+
+        public static Vector2 MousePos()
+        {
+            return new Vector2(currentMouseState.Position.X, currentMouseState.Position.Y);
+        }
     }
 }
