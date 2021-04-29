@@ -26,14 +26,18 @@ namespace ConwayGameOfLife
         private Button next;
         private Button play;
         private Button clear;
+        private Button reset;
         private Camera camera;
         public static Vector2 screenSize { get; private set; }
         private int tilesPåverkadeSenast = 0;
         private Vector2 position;
         private Vector2 previousMousePos;
         private bool monitorSwitch = false;
-
+        private bool iterating = false;
         private Stopwatch timeSinceIteration;
+        private bool playing = false;
+        private float timeForIterate = 0.5f;
+        private Stopwatch timeTakenToIterate;
 
         public Game1()
         {
@@ -49,6 +53,7 @@ namespace ConwayGameOfLife
             position = new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
             previousMousePos = camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y));
             timeSinceIteration = new Stopwatch();
+            timeTakenToIterate = new Stopwatch();
             timeSinceIteration.Start();
         }
 
@@ -78,6 +83,8 @@ namespace ConwayGameOfLife
             clear.setPos((int)Math.Round((_graphics.PreferredBackBufferWidth / 2) + clear.rectangle.Width * 0.6f), _graphics.PreferredBackBufferHeight - next.rectangle.Height * 2);
             play = new Button(new Rectangle(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2, 160, 40), aliveBox, "Play");
             play.setPos((int)Math.Round(_graphics.PreferredBackBufferWidth / 2 - next.rectangle.Width * 1.6f), _graphics.PreferredBackBufferHeight - next.rectangle.Height * 2);
+            reset = new Button(new Rectangle(0, 0, 160, 40), aliveBox, "Reset");
+            reset.setPos(0, 0);
             bool addedX = false;
             int xpos = 4;
             int ypos = 10;
@@ -119,6 +126,7 @@ namespace ConwayGameOfLife
                     next.setPos(Window.ClientBounds.Width / 2 - next.rectangle.Width / 2, Window.ClientBounds.Height - next.rectangle.Height * 2);
                     clear.setPos((int)Math.Round((Window.ClientBounds.Width / 2) + clear.rectangle.Width * 0.6f), Window.ClientBounds.Height - next.rectangle.Height * 2);
                     play.setPos((int)Math.Round(Window.ClientBounds.Width / 2 - next.rectangle.Width * 1.6f), Window.ClientBounds.Height - next.rectangle.Height * 2);
+                    reset.setPos(0, 0);
 
                     monitorSwitch = false;
                 }
@@ -136,21 +144,26 @@ namespace ConwayGameOfLife
                     }
                 }
                 bool buttonClicked = false;
-                if (next.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || fullscreen.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || clear.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || play.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y))
+                if (next.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || fullscreen.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || clear.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || play.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || reset.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y))
                 {
                     buttonClicked = true;
-                    if (next.Clicked())
+                    if (next.Clicked() && !iterating && !playing)
                     {
                         Iterate();
                     }
                     if (clear.Clicked())
                     {
-                        List<Tile> levandeTiles = knapparna.FindAll(x => x.alive);
-                        for (int i = 0; i < levandeTiles.Count; i++)
-                        {
-                            levandeTiles[i].SetAlive(false);
-                            levandeTiles[i].UpdateAlive();
-                        }
+                        ClearAll();
+                        playing = false;
+                    }
+
+                    if (reset.Clicked())
+                    {
+                        ClearAll();
+                        position = new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
+                        camera.Zoom = 1;
+                        Input.ResetScrollWheel();
+                        playing = false;
                     }
 
                     // TODO: Add your update logic here
@@ -163,6 +176,14 @@ namespace ConwayGameOfLife
                         _graphics.ApplyChanges();
                         monitorSwitch = true;
                     }
+                    if (play.Clicked())
+                    {
+                        playing = !playing;
+                    }
+                }
+                if (playing && timeSinceIteration.Elapsed.TotalSeconds > timeForIterate && !iterating)
+                {
+                    Iterate();
                 }
                 //camera.UpdateCamera(position);
                 //if (Input.GetMouseButtonDown(2))
@@ -196,11 +217,11 @@ namespace ConwayGameOfLife
                 //camera.UpdateCamera((Input.GetMouseButton(2) ? position + musDiff : position));
                 UpdateMouse(gameTime);
                 camera.UpdateCamera((position));
-                if (Input.GetMouseButtonUp(2))
+                if (next.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) && !buttonClicked)
                 {
                 }
                 //previousMousePos = mousePos;
-                if (!buttonClicked || Input.GetMouseButton(0))
+                if (!buttonClicked && Input.GetMouseButton(0) && !playing)
                 {
                     try
                     {
@@ -223,8 +244,6 @@ namespace ConwayGameOfLife
             }
         }
 
-        private MouseState mouse;
-        private Vector2 mouseDelta;
         private Vector2 lastMousePosition;
         private bool enableMouseDragging;
 
@@ -242,11 +261,20 @@ namespace ConwayGameOfLife
                 if (delta != Vector2.Zero)
                 {
                     position += delta / camera.Zoom;
-                    mouseDelta = delta;
                 }
             }
 
             lastMousePosition = Input.MousePos();
+        }
+
+        private void ClearAll()
+        {
+            List<Tile> levandeTiles = knapparna.FindAll(x => x.alive);
+            for (int i = 0; i < levandeTiles.Count; i++)
+            {
+                levandeTiles[i].SetAlive(false);
+                levandeTiles[i].UpdateAlive();
+            }
         }
 
         private void Iterate()
@@ -254,6 +282,8 @@ namespace ConwayGameOfLife
             try
             {
                 timeSinceIteration.Restart();
+                timeTakenToIterate.Restart();
+                iterating = true;
                 List<Tile> tilesPåverkade = new List<Tile>();
                 List<Tile> levandeTiles = knapparna.FindAll(x => x.alive);
                 tilesPåverkade.AddRange(levandeTiles);
@@ -265,7 +295,7 @@ namespace ConwayGameOfLife
                     List<Tile> dödaTiles = rutorBredvid.FindAll(x => !x.alive);
                     for (int a = 0; a < dödaTiles.Count; a++)
                     {
-                        if (tilesPåverkade.Contains(dödaTiles[a]))
+                        if (tilesPåverkade.FindAll(o => o == dödaTiles[a]).Count > 1)
                         {
                             dödaTiles.RemoveAt(a);
                         }
@@ -283,10 +313,13 @@ namespace ConwayGameOfLife
                     tilesPåverkade[i].UpdateAlive();
                 }
                 tilesPåverkadeSenast = tilesPåverkade.Count;
+                iterating = false;
+                timeTakenToIterate.Stop();
             }
             catch (Exception e)
             {
                 Debug.WriteLine("Next iteration error: " + e.Message);
+                iterating = false;
             }
         }
 
@@ -367,7 +400,7 @@ namespace ConwayGameOfLife
             {
                 for (int i = 0; i < knapparna.Count; i++)
                 {
-                    _spriteBatch.DrawString(font, "i: " + i, new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 3), Color.Black);
+                    _spriteBatch.DrawString(font, "i:" + i, new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 3), Color.Black);
                 }
             }
             Vector3 cameraPos = camera.transform.Translation;
@@ -378,18 +411,23 @@ namespace ConwayGameOfLife
             next.Draw(_spriteBatch, font);
             play.Draw(_spriteBatch, font);
             clear.Draw(_spriteBatch, font);
+            reset.Draw(_spriteBatch, font);
             if (debugging)
             {
                 float size = 1.6f;
-                _spriteBatch.DrawString(font, "position: " + position.ToString(), new Vector2(5, 5), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                int lines = 6;
+                Rectangle background = new Rectangle(0, 40, 450, 20 * (lines + 2));
+                _spriteBatch.Draw(aliveBox, background, Color.White);
+                _spriteBatch.DrawString(font, "position: " + position.ToString(), new Vector2(30, 50), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
                 //_spriteBatch.DrawString(font, "musklickpos: " + muspositionTillWorldPåKlick.ToString(), new Vector2(5, 25), Color.Black);
                 //_spriteBatch.DrawString(font, "musworldpos: " + camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)).ToString(), new Vector2(5, 45), Color.Black);
                 //_spriteBatch.DrawString(font, "musdiff: " + (muspositionTillWorldPåKlick - camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y))).ToString(), new Vector2(5, 65), Color.Black);
                 //_spriteBatch.DrawString(font, "Actualmusdiff: " + (previousMousePos - camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y))).ToString(), new Vector2(5, 85), Color.Black);
-                _spriteBatch.DrawString(font, "tilesUpdated: " + (tilesPåverkadeSenast).ToString(), new Vector2(5, 25), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
-                _spriteBatch.DrawString(font, "timesinceIterate: " + (timeSinceIteration).Elapsed.ToString(), new Vector2(5, 45), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
-                _spriteBatch.DrawString(font, "zoom: " + (camera.Zoom).ToString(), new Vector2(5, 65), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
-                _spriteBatch.DrawString(font, "scrollWheel: " + (Input.clampedScrollWheelValue).ToString(), new Vector2(5, 85), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(font, "tilesUpdated: " + (tilesPåverkadeSenast).ToString(), new Vector2(30, 70), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(font, "timesinceIterate: " + (timeSinceIteration).Elapsed.ToString(), new Vector2(30, 90), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(font, "zoom: " + (camera.Zoom).ToString(), new Vector2(30, 110), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(font, "scrollWheel: " + (Input.clampedScrollWheelValue).ToString(), new Vector2(30, 130), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(font, "timetakentoiterate: " + (timeTakenToIterate.Elapsed).ToString(), new Vector2(30, 150), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
             }
             _spriteBatch.End();
             base.Draw(gameTime);

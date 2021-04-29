@@ -149,5 +149,10 @@ namespace ConwayGameOfLife
         {
             return new Vector2(currentMouseState.Position.X, currentMouseState.Position.Y);
         }
+
+        public static void ResetScrollWheel()
+        {
+            clampedScrollWheelValue = 0;
+        }
     }
 }
