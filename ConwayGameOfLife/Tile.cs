@@ -62,7 +62,7 @@ namespace ConwayGameOfLife
                     {
                         Texture = deadTex;
                     }
-                    return true;
+                    return false;
                 }
             }
             return false;

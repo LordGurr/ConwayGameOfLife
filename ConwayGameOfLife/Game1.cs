@@ -109,6 +109,7 @@ namespace ConwayGameOfLife
             }
             _graphics.IsFullScreen = false;
             _graphics.ApplyChanges();
+            Input.setCameraStuff(camera);
             // TODO: use this.Content to load your game content here
         }
 
@@ -221,7 +222,7 @@ namespace ConwayGameOfLife
                 {
                 }
                 //previousMousePos = mousePos;
-                if (!buttonClicked && Input.GetMouseButton(0) && !playing)
+                if (Input.GetMouseButtonDown(0) && !buttonClicked && !playing)
                 {
                     try
                     {
@@ -237,6 +238,22 @@ namespace ConwayGameOfLife
                     }
                     catch (Exception e)
                     {
+                        string temp = e.Message;
+                    }
+                }
+                else if (Input.GetMouseButton(0) && !buttonClicked && !playing)
+                {
+                    try
+                    {
+                        List<Tile> tilesToCheck = knapparna.FindAll(a => a.alive != Input.mouseClickingToAlive);
+                        for (int i = 0; i < tilesToCheck.Count; i++)
+                        {
+                            tilesToCheck[i].Clicked(camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)));
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.WriteLine(e.Message);
                         string temp = e.Message;
                     }
                 }
@@ -320,6 +337,7 @@ namespace ConwayGameOfLife
             {
                 Debug.WriteLine("Next iteration error: " + e.Message);
                 iterating = false;
+                timeTakenToIterate.Stop();
             }
         }
 
@@ -385,6 +403,7 @@ namespace ConwayGameOfLife
                 int index = (int)(o["Index"]);
                 return knapparna[index];
             }
+            Debug.WriteLine("Tile from pos retuns null");
             return null;
         }
 

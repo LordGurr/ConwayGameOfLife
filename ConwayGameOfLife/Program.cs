@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace ConwayGameOfLife
 {
@@ -7,7 +8,7 @@ namespace ConwayGameOfLife
         [STAThread]
         private static void Main()
         {
-            Console.WriteLine("Hjälp mig");
+            Debug.WriteLine("Hjälp mig");
             using (var game = new Game1())
                 game.Run();
         }

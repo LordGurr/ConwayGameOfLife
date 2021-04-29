@@ -11,6 +11,8 @@ namespace ConwayGameOfLife
         public Camera(Viewport _viewport)
         {
             viewport = _viewport;
+            maxZoom = 5;
+            minZoom = 0.3f;
         }
 
         public Matrix transform { get; private set; }
@@ -19,6 +21,8 @@ namespace ConwayGameOfLife
         private float zoom = 1;
         private Vector2 centre;
         private Viewport viewport;
+        public float maxZoom { private set; get; }
+        public float minZoom { private set; get; }
 
         public float Zoom
         {
@@ -29,10 +33,10 @@ namespace ConwayGameOfLife
             set
             {
                 zoom = value;
-                if (zoom > 5 || zoom < 0.3f)
+                if (zoom > maxZoom || zoom < minZoom)
                 {
                 }
-                zoom = MathHelper.Clamp(zoom, 0.3f, 5);
+                zoom = MathHelper.Clamp(zoom, minZoom, maxZoom);
                 //zoom = zoom < 0.3f ? 0.3f : zoom;
             }
         }
