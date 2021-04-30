@@ -115,6 +115,7 @@ namespace ConwayGameOfLife
 
         protected override void Update(GameTime gameTime)
         {
+            Input.GetState();
             if (IsActive)
             {
                 if (monitorSwitch)
@@ -131,7 +132,6 @@ namespace ConwayGameOfLife
 
                     monitorSwitch = false;
                 }
-                Input.GetState();
                 if (Input.GetButtonUp(Buttons.Back) || Input.GetButtonUp(Keys.Escape))
                     Exit();
                 if (Input.GetButtonDown(Keys.PrintScreen) || Input.GetButtonDown(Buttons.X))
@@ -163,7 +163,7 @@ namespace ConwayGameOfLife
                         ClearAll();
                         position = new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
                         camera.Zoom = 1;
-                        Input.ResetScrollWheel();
+                        Input.SetScrollWheel(0);
                         playing = false;
                     }
 
@@ -180,6 +180,27 @@ namespace ConwayGameOfLife
                     if (play.Clicked())
                     {
                         playing = !playing;
+                    }
+                }
+                if (Input.GetButtonDown(Keys.F11) || Input.GetButtonDown(Keys.Space) || Input.GetButtonDown(Keys.Enter))
+                {
+                    buttonClicked = true;
+                    if (Input.GetButtonDown(Keys.F11))
+                    {
+                        //fullscreen.setPos(GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width - buttonStart.rectangle.Width, 0);
+                        //_graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+                        //_graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
+                        _graphics.IsFullScreen = !_graphics.IsFullScreen;
+                        _graphics.ApplyChanges();
+                        monitorSwitch = true;
+                    }
+                    if (Input.GetButtonDown(Keys.Space))
+                    {
+                        playing = !playing;
+                    }
+                    if (Input.GetButtonDown(Keys.Enter) && !iterating && !playing)
+                    {
+                        Iterate();
                     }
                 }
                 if (playing && timeSinceIteration.Elapsed.TotalSeconds > timeForIterate && !iterating)
@@ -203,11 +224,13 @@ namespace ConwayGameOfLife
                 //}
                 if (Input.GetButton(Keys.PageDown))
                 {
-                    camera.Zoom -= 0.01f;
+                    //camera.Zoom -= 0.01f;
+                    Input.SetScrollWheel(Input.clampedScrollWheelValue - (int)(990 * gameTime.ElapsedGameTime.TotalSeconds));
                 }
-                else if (Input.GetButton(Keys.PageUp))
+                if (Input.GetButton(Keys.PageUp))
                 {
-                    camera.Zoom += 0.01f;
+                    Input.SetScrollWheel(Input.clampedScrollWheelValue + (int)(990 * gameTime.ElapsedGameTime.TotalSeconds));
+                    //camera.Zoom += 0.01f;
                 }
                 camera.Zoom = (float)(Input.clampedScrollWheelValue * 0.001) + 1;
 
