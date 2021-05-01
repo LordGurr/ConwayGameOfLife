@@ -207,6 +207,16 @@ namespace ConwayGameOfLife
                 {
                     Iterate();
                 }
+                if (Input.GetButton(Keys.Up))
+                {
+                    timeForIterate -= 1 * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    timeForIterate = (float)Math.Clamp(timeForIterate, 0.05, 10);
+                }
+                if (Input.GetButton(Keys.Down))
+                {
+                    timeForIterate += 1 * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    timeForIterate = (float)Math.Clamp(timeForIterate, 0.05, 2);
+                }
                 //camera.UpdateCamera(position);
                 //if (Input.GetMouseButtonDown(2))
                 //{
@@ -457,7 +467,7 @@ namespace ConwayGameOfLife
             if (debugging)
             {
                 float size = 1.6f;
-                int lines = 6;
+                int lines = 7;
                 Rectangle background = new Rectangle(0, 40, 450, 20 * (lines + 2));
                 _spriteBatch.Draw(aliveBox, background, Color.White);
                 _spriteBatch.DrawString(font, "position: " + position.ToString(), new Vector2(30, 50), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
@@ -470,6 +480,7 @@ namespace ConwayGameOfLife
                 _spriteBatch.DrawString(font, "zoom: " + (camera.Zoom).ToString(), new Vector2(30, 110), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
                 _spriteBatch.DrawString(font, "scrollWheel: " + (Input.clampedScrollWheelValue).ToString(), new Vector2(30, 130), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
                 _spriteBatch.DrawString(font, "timetakentoiterate: " + (timeTakenToIterate.Elapsed).ToString(), new Vector2(30, 150), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(font, "timeforiterate: " + (timeForIterate).ToString(), new Vector2(30, 170), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
             }
             _spriteBatch.End();
             base.Draw(gameTime);
