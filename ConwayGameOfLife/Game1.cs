@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 
 namespace ConwayGameOfLife
 {
@@ -38,6 +39,7 @@ namespace ConwayGameOfLife
         private bool playing = false;
         private float timeForIterate = 0.5f;
         private Stopwatch timeTakenToIterate;
+        private Texture2D box;
 
         public Game1()
         {
@@ -74,6 +76,7 @@ namespace ConwayGameOfLife
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             debug = Content.Load<Texture2D>("Box15");
             aliveBox = Content.Load<Texture2D>("Box15Alive");
+            box = Content.Load<Texture2D>("Box15White");
             font = Content.Load<SpriteFont>("font");
             fullscreen = new Button(new Rectangle(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2, 160, 40), aliveBox, "Fullscreen");
             fullscreen.setPos(_graphics.PreferredBackBufferWidth - fullscreen.rectangle.Width, 0);
@@ -150,7 +153,7 @@ namespace ConwayGameOfLife
                     buttonClicked = true;
                     if (next.Clicked() && !iterating && !playing)
                     {
-                        Iterate();
+                        StartThreadIterate();
                     }
                     if (clear.Clicked())
                     {
@@ -200,12 +203,12 @@ namespace ConwayGameOfLife
                     }
                     if (Input.GetButtonDown(Keys.Enter) && !iterating && !playing)
                     {
-                        Iterate();
+                        StartThreadIterate();
                     }
                 }
                 if (playing && timeSinceIteration.Elapsed.TotalSeconds > timeForIterate && !iterating)
                 {
-                    Iterate();
+                    StartThreadIterate();
                 }
                 if (Input.GetButton(Keys.Up))
                 {
@@ -255,42 +258,50 @@ namespace ConwayGameOfLife
                 {
                 }
                 //previousMousePos = mousePos;
-                if (Input.GetMouseButtonDown(0) && !buttonClicked && !playing)
+                if (!buttonClicked && !playing)
                 {
-                    try
+                    if (Input.GetMouseButtonDown(0))
                     {
-                        for (int i = 0; i < knapparna.Count; i++)
+                        try
                         {
-                            bool temp = knapparna[i].Clicked(camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)));
-                            if (temp)
+                            for (int i = 0; i < knapparna.Count; i++)
                             {
-                                Input.mouseClickingToAlive = knapparna[i].alive;
-                                break;
+                                bool temp = knapparna[i].Clicked(camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)));
+                                if (temp)
+                                {
+                                    Input.mouseClickingToAlive = knapparna[i].alive;
+                                    break;
+                                }
                             }
                         }
-                    }
-                    catch (Exception e)
-                    {
-                        string temp = e.Message;
-                    }
-                }
-                else if (Input.GetMouseButton(0) && !buttonClicked && !playing)
-                {
-                    try
-                    {
-                        List<Tile> tilesToCheck = knapparna.FindAll(a => a.alive != Input.mouseClickingToAlive);
-                        for (int i = 0; i < tilesToCheck.Count; i++)
+                        catch (Exception e)
                         {
-                            tilesToCheck[i].Clicked(camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)));
+                            string temp = e.Message;
                         }
                     }
-                    catch (Exception e)
+                    else if (Input.GetMouseButton(0))
                     {
-                        Debug.WriteLine(e.Message);
-                        string temp = e.Message;
+                        try
+                        {
+                            List<Tile> tilesToCheck = knapparna.FindAll(a => a.alive != Input.mouseClickingToAlive);
+                            for (int i = 0; i < tilesToCheck.Count; i++)
+                            {
+                                tilesToCheck[i].Clicked(camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)));
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.WriteLine(e.Message);
+                            string temp = e.Message;
+                        }
                     }
                 }
                 base.Update(gameTime);
+            }
+            else
+            {
+                Input.GetState();
+                lastMousePosition = Input.MousePos();
             }
         }
 
@@ -327,13 +338,21 @@ namespace ConwayGameOfLife
             }
         }
 
+        private void StartThreadIterate()
+        {
+            iterating = true;
+            Thread t = new Thread(Iterate);
+            t.Name = "IterateThread";
+            t.Start();
+        }
+
         private void Iterate()
         {
             try
             {
+                iterating = true;
                 timeSinceIteration.Restart();
                 timeTakenToIterate.Restart();
-                iterating = true;
                 List<Tile> tilesPåverkade = new List<Tile>();
                 List<Tile> levandeTiles = knapparna.FindAll(x => x.alive);
                 tilesPåverkade.AddRange(levandeTiles);
@@ -363,14 +382,73 @@ namespace ConwayGameOfLife
                     tilesPåverkade[i].UpdateAlive();
                 }
                 tilesPåverkadeSenast = tilesPåverkade.Count;
-                iterating = false;
                 timeTakenToIterate.Stop();
+                iterating = false;
             }
             catch (Exception e)
             {
                 Debug.WriteLine("Next iteration error: " + e.Message);
                 iterating = false;
                 timeTakenToIterate.Stop();
+            }
+        }
+
+        private void IterateThread()
+        {
+            try
+            {
+                iterating = true;
+                timeSinceIteration.Restart();
+                timeTakenToIterate.Restart();
+                List<Tile> tilesPåverkade = new List<Tile>();
+                List<Tile> levandeTiles = knapparna.FindAll(x => x.alive);
+                tilesPåverkade.AddRange(levandeTiles);
+                List<Thread> threads = new List<Thread>();
+                for (int i = 0; i < levandeTiles.Count; i++)
+                {
+                    Tile tile = levandeTiles[i];
+                    threads.Add(new Thread(() => IterateTile(tile)));
+                    threads[threads.Count - 1].Start();
+                }
+                for (int i = 0; i < threads.Count; i++)
+                {
+                    threads[i].Join();
+                }
+                for (int i = 0; i < knapparna.Count; i++)
+                {
+                    knapparna[i].UpdateAlive();
+                }
+                tilesPåverkadeSenast = tilesPåverkade.Count;
+                timeTakenToIterate.Stop();
+                iterating = false;
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine("Next iteration error: " + e.Message);
+                iterating = false;
+                timeTakenToIterate.Stop();
+            }
+        }
+
+        private void IterateTile(Tile tile)
+        {
+            List<Tile> rutorBredvid = tilesBredvid(tile);
+            //tilesPåverkade.AddRange(rutorBredvid);
+            tile.SetAlive(rutorBredvid.FindAll(x => x.alive).Count);
+            List<Tile> dödaTiles = rutorBredvid.FindAll(x => !x.alive);
+            //for (int a = 0; a < dödaTiles.Count; a++)
+            //{
+            //    if (tilesPåverkade.FindAll(o => o == dödaTiles[a]).Count > 1)
+            //    {
+            //        dödaTiles.RemoveAt(a);
+            //    }
+            //}
+            //tilesPåverkade.AddRange(dödaTiles);
+            for (int a = 0; a < dödaTiles.Count; a++)
+            {
+                List<Tile> rutorBredvidDöda = tilesBredvid(dödaTiles[a]);
+                //tilesPåverkade.AddRange(rutorBredvidDöda);
+                dödaTiles[a].SetAlive(rutorBredvidDöda.FindAll(x => x.alive).Count);
             }
         }
 
@@ -443,6 +521,7 @@ namespace ConwayGameOfLife
         protected override void Draw(GameTime gameTime)
         {
             _spriteBatch.Begin(SpriteSortMode.Deferred, null, SamplerState.PointClamp, transformMatrix: camera.transform);
+            Color color = new Color(252, 204, 76);
             GraphicsDevice.Clear(Color.DarkGray);
             for (int i = 0; i < knapparna.Count; i++)
             {
@@ -467,7 +546,7 @@ namespace ConwayGameOfLife
             if (debugging)
             {
                 float size = 1.6f;
-                int lines = 7;
+                int lines = 8;
                 Rectangle background = new Rectangle(0, 40, 450, 20 * (lines + 2));
                 _spriteBatch.Draw(aliveBox, background, Color.White);
                 _spriteBatch.DrawString(font, "position: " + position.ToString(), new Vector2(30, 50), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
@@ -481,6 +560,7 @@ namespace ConwayGameOfLife
                 _spriteBatch.DrawString(font, "scrollWheel: " + (Input.clampedScrollWheelValue).ToString(), new Vector2(30, 130), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
                 _spriteBatch.DrawString(font, "timetakentoiterate: " + (timeTakenToIterate.Elapsed).ToString(), new Vector2(30, 150), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
                 _spriteBatch.DrawString(font, "timeforiterate: " + (timeForIterate).ToString(), new Vector2(30, 170), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(font, "iterating: " + (iterating).ToString(), new Vector2(30, 190), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
             }
             _spriteBatch.End();
             base.Draw(gameTime);

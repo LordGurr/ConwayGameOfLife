@@ -82,37 +82,43 @@ namespace ConwayGameOfLife
 
         public void SetAlive(int aliveNeighboors)
         {
-            if (!alive && aliveNeighboors == 3)
+            if (aliveToChangeToNextTurn == AliveNext.tbd)
             {
-                SetAlive(true);
-                return;
-            }
-            if (alive && (aliveNeighboors < 2) ^ (aliveNeighboors > 3))
-            {
-                SetAlive(false);
-                return;
+                if (!alive && aliveNeighboors == 3)
+                {
+                    SetAlive(true);
+                    return;
+                }
+                else if (alive && (aliveNeighboors < 2) ^ (aliveNeighboors > 3))
+                {
+                    SetAlive(false);
+                    return;
+                }
             }
         }
 
         public void UpdateAlive()
         {
-            if (aliveToChangeToNextTurn == AliveNext.alive)
+            if (aliveToChangeToNextTurn != AliveNext.tbd)
             {
-                alive = true;
+                if (aliveToChangeToNextTurn == AliveNext.alive)
+                {
+                    alive = true;
+                }
+                else if (aliveToChangeToNextTurn == AliveNext.dead)
+                {
+                    alive = false;
+                }
+                if (alive)
+                {
+                    Texture = aliveTex;
+                }
+                else
+                {
+                    Texture = deadTex;
+                }
+                aliveToChangeToNextTurn = AliveNext.tbd;
             }
-            else if (aliveToChangeToNextTurn == AliveNext.dead)
-            {
-                alive = false;
-            }
-            if (alive)
-            {
-                Texture = aliveTex;
-            }
-            else
-            {
-                Texture = deadTex;
-            }
-            aliveToChangeToNextTurn = AliveNext.tbd;
         }
     }
 }
