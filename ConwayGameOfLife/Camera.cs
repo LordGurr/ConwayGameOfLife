@@ -20,7 +20,7 @@ namespace ConwayGameOfLife
         private float xVelocity = 0.0f;
         private float zoom = 1;
         private Vector2 centre;
-        private Viewport viewport;
+        public Viewport viewport;
         public float maxZoom { private set; get; }
         public float minZoom { private set; get; }
 

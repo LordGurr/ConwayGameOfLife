@@ -15,6 +15,7 @@ namespace ConwayGameOfLife
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private List<Tile> knapparna = new List<Tile>();
+        private Tile[,] arrayTiles;
         private int widthOfSingleCollisionSquare = 60;
         private int lengthofCollisionSquareX = 0;
         private int lengthofCollisionSquareY = 0;
@@ -40,6 +41,10 @@ namespace ConwayGameOfLife
         private float timeForIterate = 0.5f;
         private Stopwatch timeTakenToIterate;
         private Texture2D box;
+        private Stopwatch deltaTime;
+        private Rectangle tilesOnScreen;
+
+        private bool drawRectPos = true;
 
         public Game1()
         {
@@ -91,16 +96,19 @@ namespace ConwayGameOfLife
             bool addedX = false;
             int xpos = 4;
             int ypos = 10;
-            for (int a = -_graphics.PreferredBackBufferHeight; a < _graphics.PreferredBackBufferHeight * 2; a += widthOfSingleCollisionSquare)
+            int size = 8;
+            arrayTiles = new Tile[((size * 3) / 2) * (_graphics.PreferredBackBufferWidth / widthOfSingleCollisionSquare), ((size * 3) / 2) * (_graphics.PreferredBackBufferHeight / widthOfSingleCollisionSquare)];
+            for (int a = -_graphics.PreferredBackBufferHeight * (size / 2); a < _graphics.PreferredBackBufferHeight * size; a += widthOfSingleCollisionSquare)
             {
-                for (int i = -_graphics.PreferredBackBufferWidth; i < _graphics.PreferredBackBufferWidth * 2; i += widthOfSingleCollisionSquare)
+                for (int i = -_graphics.PreferredBackBufferWidth * (size / 2); i < _graphics.PreferredBackBufferWidth * size; i += widthOfSingleCollisionSquare)
                 {
-                    knapparna.Add(new Tile(new Rectangle(i, a, widthOfSingleCollisionSquare, widthOfSingleCollisionSquare), debug, aliveBox, (i + _graphics.PreferredBackBufferWidth) / widthOfSingleCollisionSquare, (a + _graphics.PreferredBackBufferHeight) / widthOfSingleCollisionSquare));
+                    knapparna.Add(new Tile(new Rectangle(i - (int)((0.25f * size - 0.5f) * _graphics.PreferredBackBufferWidth), a - (int)((0.25f * size - 0.5f) * _graphics.PreferredBackBufferHeight), widthOfSingleCollisionSquare, widthOfSingleCollisionSquare), debug, aliveBox, (i + _graphics.PreferredBackBufferWidth * (size / 2)) / widthOfSingleCollisionSquare, (a + _graphics.PreferredBackBufferHeight * (size / 2)) / widthOfSingleCollisionSquare));
                     DataRow tempRow = dt.NewRow();
                     tempRow[0] = knapparna.Count - 1;
-                    tempRow[1] = (i + _graphics.PreferredBackBufferWidth) / widthOfSingleCollisionSquare;
-                    tempRow[2] = (a + _graphics.PreferredBackBufferHeight) / widthOfSingleCollisionSquare;
+                    tempRow[1] = (i + _graphics.PreferredBackBufferWidth * (size / 2)) / widthOfSingleCollisionSquare;
+                    tempRow[2] = (a + _graphics.PreferredBackBufferHeight * (size / 2)) / widthOfSingleCollisionSquare;
                     dt.Rows.Add(tempRow);
+                    arrayTiles[(i + _graphics.PreferredBackBufferWidth * (size / 2)) / widthOfSingleCollisionSquare, (a + _graphics.PreferredBackBufferHeight * (size / 2)) / widthOfSingleCollisionSquare] = knapparna[^1];
                     //dt.Rows.Add(knapparna.Count - 1, i, a);
                     if (!addedX)
                     {
@@ -110,17 +118,40 @@ namespace ConwayGameOfLife
                 addedX = true;
                 lengthofCollisionSquareY++;
             }
+            Vector2Int leftTop = new Vector2Int(knapparna[0].rectangle.X, knapparna[0].rectangle.Y);
+            Vector2Int rightBottom = new Vector2Int(knapparna[^1].rectangle.X, knapparna[^1].rectangle.Y);
+            Vector2Int center = new Vector2Int(arrayTiles[arrayTiles.GetLength(0) / 2, arrayTiles.GetLength(1) / 2].rectangle.X, arrayTiles[arrayTiles.GetLength(0) / 2, arrayTiles.GetLength(1) / 2].rectangle.Y);
             _graphics.IsFullScreen = false;
             _graphics.ApplyChanges();
             Input.setCameraStuff(camera);
+            deltaTime = new Stopwatch();
+            deltaTime.Start();
             // TODO: use this.Content to load your game content here
         }
 
         protected override void Update(GameTime gameTime)
         {
             Input.GetState();
+            //deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            deltaTime.Restart();
             if (IsActive)
             {
+                Vector2 topLeft = (camera.ScreenToWorldSpace(Vector2.Zero));
+                Vector2 bottomRight = camera.ScreenToWorldSpace(new Vector2(camera.viewport.Width, camera.viewport.Height));
+                Vector2Int topLeftScaled = new Vector2Int(AdvancedMath.GetNearestMultiple((int)topLeft.X, widthOfSingleCollisionSquare), AdvancedMath.GetNearestMultiple((int)topLeft.Y, widthOfSingleCollisionSquare));
+                Vector2Int bottomRightScaled = new Vector2Int(AdvancedMath.GetNearestMultiple((int)bottomRight.X, widthOfSingleCollisionSquare), AdvancedMath.GetNearestMultiple((int)bottomRight.Y, widthOfSingleCollisionSquare));
+
+                topLeftScaled -= new Vector2Int(arrayTiles[0, 0].rectangle.X, arrayTiles[0, 0].rectangle.Y);
+                bottomRightScaled -= new Vector2Int(arrayTiles[0, 0].rectangle.X, arrayTiles[0, 0].rectangle.Y);
+
+                topLeftScaled /= widthOfSingleCollisionSquare;
+                bottomRightScaled /= widthOfSingleCollisionSquare;
+
+                topLeftScaled = new Vector2Int(Math.Max(topLeftScaled.X, 0), Math.Max(topLeftScaled.Y, 0));
+
+                tilesOnScreen = new Rectangle((int)topLeft.X, (int)topLeft.Y, (int)topLeft.X + (int)bottomRight.X, (int)topLeft.Y + (int)bottomRight.Y);
+                tilesOnScreen = new Rectangle((int)topLeftScaled.X - 1, (int)topLeftScaled.Y - 1, /*(int)topLeftScaled.X +*/ (int)bottomRightScaled.X + 1, /*(int)topLeftScaled.Y +*/ (int)bottomRightScaled.Y + 1);
+
                 if (monitorSwitch)
                 {
                     if (Window.ClientBounds.Width > 1)
@@ -146,6 +177,10 @@ namespace ConwayGameOfLife
                         _graphics.ApplyChanges();
                         screenSize = new Vector2(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
                     }
+                }
+                if (debugging && Input.GetButtonDown(Keys.Home))
+                {
+                    drawRectPos = !drawRectPos;
                 }
                 bool buttonClicked = false;
                 if (next.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || fullscreen.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || clear.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || play.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || reset.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y))
@@ -283,10 +318,21 @@ namespace ConwayGameOfLife
                     {
                         try
                         {
-                            List<Tile> tilesToCheck = knapparna.FindAll(a => a.alive != Input.mouseClickingToAlive);
+                            /*List<Tile> tilesToCheck = knapparna.FindAll(a => a.alive != Input.mouseClickingToAlive);
                             for (int i = 0; i < tilesToCheck.Count; i++)
                             {
                                 tilesToCheck[i].Clicked(camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)));
+                            }*/
+
+                            for (int x = Math.Max(tilesOnScreen.X, 0); x < Math.Min(tilesOnScreen.Width, arrayTiles.GetLength(0)); x++)
+                            {
+                                for (int y = Math.Max(tilesOnScreen.Y, 0); y < Math.Min(tilesOnScreen.Height, arrayTiles.GetLength(1)); y++)
+                                {
+                                    if (arrayTiles[x, y].alive != Input.mouseClickingToAlive)
+                                    {
+                                        arrayTiles[x, y].Clicked(camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)));
+                                    }
+                                }
                             }
                         }
                         catch (Exception e)
@@ -341,7 +387,7 @@ namespace ConwayGameOfLife
         private void StartThreadIterate()
         {
             iterating = true;
-            Thread t = new Thread(Iterate);
+            Thread t = new Thread(IterateNew);
             t.Name = "IterateThread";
             t.Start();
         }
@@ -391,6 +437,62 @@ namespace ConwayGameOfLife
                 iterating = false;
                 timeTakenToIterate.Stop();
             }
+        }
+
+        private void IterateNew()
+        {
+            //try
+            {
+                iterating = true;
+                timeSinceIteration.Restart();
+                timeTakenToIterate.Restart();
+                List<Tile> tilesPåverkade = new List<Tile>();
+                List<Tile> levandeTiles = knapparna.FindAll(x => x.alive);
+                tilesPåverkade.AddRange(levandeTiles);
+                for (int i = 0; i < levandeTiles.Count; i++)
+                {
+                    //List<Tile> rutorBredvid = tilesBredvid(levandeTiles[i]);
+                    foreach (Tile tile in TilesBredvidNew(new Vector2Int(levandeTiles[i].xpos, levandeTiles[i].ypos)))
+                    {
+                        tilesPåverkade.Add(tile);
+                    }
+                    //tilesPåverkade.AddRange(rutorBredvid);
+                    //levandeTiles[i].SetAlive(rutorBredvid.FindAll(x => x.alive).Count);
+                    //List<Tile> dödaTiles = rutorBredvid.FindAll(x => !x.alive);
+                    //for (int a = 0; a < dödaTiles.Count; a++)
+                    //{
+                    //    if (tilesPåverkade.FindAll(o => o == dödaTiles[a]).Count > 1)
+                    //    {
+                    //        dödaTiles.RemoveAt(a);
+                    //    }
+                    //}
+                    //tilesPåverkade.AddRange(dödaTiles);
+                    //for (int a = 0; a < dödaTiles.Count; a++)
+                    //{
+                    //    List<Tile> rutorBredvidDöda = tilesBredvid(dödaTiles[a]);
+                    //    //tilesPåverkade.AddRange(rutorBredvidDöda);
+                    //    dödaTiles[a].SetAlive(rutorBredvidDöda.FindAll(x => x.alive).Count);
+                    //}
+                }
+                for (int i = 0; i < tilesPåverkade.Count; i++)
+                {
+                    //List<Tile> rutorBredvid = tilesBredvid(tilesPåverkade[i]);
+                    tilesPåverkade[i].SetAlive(TilesBredvidCountNew(new Vector2Int(tilesPåverkade[i].xpos, tilesPåverkade[i].ypos)));
+                }
+                for (int i = 0; i < tilesPåverkade.Count; i++)
+                {
+                    tilesPåverkade[i].UpdateAlive();
+                }
+                tilesPåverkadeSenast = tilesPåverkade.Count;
+                timeTakenToIterate.Stop();
+                iterating = false;
+            }
+            //catch (Exception e)
+            //{
+            //    Debug.WriteLine("Next iteration error: " + e.Message);
+            //    iterating = false;
+            //    timeTakenToIterate.Stop();
+            //}
         }
 
         private void IterateThread()
@@ -507,6 +609,98 @@ namespace ConwayGameOfLife
             return returnList;
         }
 
+        public static readonly Vector2Int[] Directions = new[]
+        {
+            new Vector2Int(0, 1),     //  Up
+            new Vector2Int(0, -1),    //  Down
+            new Vector2Int(-1, 0),    //  Left
+            new Vector2Int(1, 0),     //  Right
+
+            //new Location(1,1),      //  Up Right
+            //new Location(1,-1),     //  Down Right
+            //new Location(-1,-1),    //  Down Left
+            //new Location(-1,1),     //  Up Left
+        };
+
+        public static readonly Vector2Int[] DiagonalDirections = new[]
+        {
+            new Vector2Int(1,1),      //  Up Right
+            new Vector2Int(1,-1),     //  Down Right
+            new Vector2Int(-1,-1),    //  Down Left
+            new Vector2Int(-1,1),     //  Up Left
+        };
+
+        public static readonly Vector2Int[] Lookup = new[]
+        {
+            new Vector2Int(0,3),
+            new Vector2Int(1,3),
+            new Vector2Int (1,2),
+            new Vector2Int(0,2),
+        };
+
+        private IEnumerable<Tile> TilesBredvidNew(Vector2Int id)
+        {
+            bool[] passable = new bool[4];
+            for (int i = 0; i < Directions.Length; i++)
+            {
+                Vector2Int next = new Vector2Int(id.X + Directions[i].X, id.Y + Directions[i].Y);
+
+                if (InBounds(next))
+                {
+                    yield return GetTileFromPosNew(next);
+                    passable[i] = true;
+                }
+            }
+            for (int i = 0; i < DiagonalDirections.Length; i++)
+            {
+                Vector2Int next = new Vector2Int(id.X + DiagonalDirections[i].X, id.Y + DiagonalDirections[i].Y);
+
+                if (passable[Lookup[i].X] && passable[Lookup[i].Y])
+                {
+                    yield return GetTileFromPosNew(next);
+                }
+            }
+        }
+
+        private int TilesBredvidCountNew(Vector2Int id)
+        {
+            bool[] passable = new bool[4];
+            int amountAlive = 0;
+            for (int i = 0; i < Directions.Length; i++)
+            {
+                Vector2Int next = new Vector2Int(id.X + Directions[i].X, id.Y + Directions[i].Y);
+
+                if (InBounds(next))
+                {
+                    //yield return GetTileFromPos(next);
+                    passable[i] = true;
+                    if (GetTileFromPosNew(next).alive)
+                    {
+                        amountAlive++;
+                    }
+                }
+            }
+            for (int i = 0; i < DiagonalDirections.Length; i++)
+            {
+                Vector2Int next = new Vector2Int(id.X + DiagonalDirections[i].X, id.Y + DiagonalDirections[i].Y);
+
+                if (passable[Lookup[i].X] && passable[Lookup[i].Y])
+                {
+                    if (GetTileFromPosNew(next).alive)
+                    {
+                        amountAlive++;
+                    }
+                }
+            }
+            return amountAlive;
+        }
+
+        public bool InBounds(Vector2Int id)
+        {
+            return 0 <= id.X && id.X < lengthofCollisionSquareX &&
+                   0 <= id.Y && id.Y < lengthofCollisionSquareY;
+        }
+
         private Tile GetTileFromPos(int xPos, int yPos)
         {
             foreach (DataRow o in dt.Select("Xpos = " + xPos + " AND Ypos = " + yPos).Take(1))
@@ -518,20 +712,72 @@ namespace ConwayGameOfLife
             return null;
         }
 
+        private Tile GetTileFromPos(Vector2Int vector2Int)
+        {
+            foreach (DataRow o in dt.Select("Xpos = " + vector2Int.X + " AND Ypos = " + vector2Int.Y).Take(1))
+            {
+                int index = (int)(o["Index"]);
+                return knapparna[index];
+            }
+            Debug.WriteLine("Tile from pos retuns null");
+            return null;
+        }
+
+        private Tile GetTileFromPosNew(Vector2Int vector2Int)
+        {
+            return arrayTiles[vector2Int.X, vector2Int.Y];
+            Debug.WriteLine("Tile from pos retuns null");
+            return null;
+        }
+
+        private void DrawButtons()
+        {
+            int drawnButtons = 0;
+            for (int x = Math.Max(tilesOnScreen.X, 0); x < Math.Min(tilesOnScreen.Width, arrayTiles.GetLength(0)); x++)
+            {
+                for (int y = Math.Max(tilesOnScreen.Y, 0); y < Math.Min(tilesOnScreen.Height, arrayTiles.GetLength(1)); y++)
+                {
+                    arrayTiles[x, y].Draw(_spriteBatch, font);
+                    drawnButtons++;
+                }
+            }
+            drawnButtons = 0;
+        }
+
         protected override void Draw(GameTime gameTime)
         {
             _spriteBatch.Begin(SpriteSortMode.Deferred, null, SamplerState.PointClamp, transformMatrix: camera.transform);
             Color color = new Color(252, 204, 76);
             GraphicsDevice.Clear(Color.DarkGray);
-            for (int i = 0; i < knapparna.Count; i++)
-            {
-                knapparna[i].Draw(_spriteBatch, font);
-            }
+            //for (int i = 0; i < knapparna.Count; i++)
+            //{
+            //    knapparna[i].Draw(_spriteBatch, font);
+            //}
+            DrawButtons();
             if (debugging)
             {
                 for (int i = 0; i < knapparna.Count; i++)
                 {
                     _spriteBatch.DrawString(font, "i:" + i, new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 3), Color.Black);
+                }
+                if (drawRectPos)
+                {
+                    for (int i = 0; i < knapparna.Count; i++)
+                    {
+                        _spriteBatch.DrawString(font, "pos:", new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 13), Color.Black);
+                        _spriteBatch.DrawString(font, knapparna[i].rectangle.X.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 29), Color.Black);
+                        _spriteBatch.DrawString(font, knapparna[i].rectangle.Y.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 42), Color.Black);
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < knapparna.Count; i++)
+                    {
+                        _spriteBatch.DrawString(font, "pos:", new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 13), Color.Black);
+                        _spriteBatch.DrawString(font, knapparna[i].xpos.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 29), Color.Black);
+                        _spriteBatch.DrawString(font, knapparna[i].ypos.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 42), Color.Black);
+                        //_spriteBatch.DrawString(font, "pos:" + knapparna[i].xpos.ToString() + "," + knapparna[i].ypos.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 13), Color.Black);
+                    }
                 }
             }
             Vector3 cameraPos = camera.transform.Translation;
@@ -546,7 +792,7 @@ namespace ConwayGameOfLife
             if (debugging)
             {
                 float size = 1.6f;
-                int lines = 8;
+                int lines = 9;
                 Rectangle background = new Rectangle(0, 40, 450, 20 * (lines + 2));
                 _spriteBatch.Draw(aliveBox, background, Color.White);
                 _spriteBatch.DrawString(font, "position: " + position.ToString(), new Vector2(30, 50), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
@@ -561,6 +807,7 @@ namespace ConwayGameOfLife
                 _spriteBatch.DrawString(font, "timetakentoiterate: " + (timeTakenToIterate.Elapsed).ToString(), new Vector2(30, 150), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
                 _spriteBatch.DrawString(font, "timeforiterate: " + (timeForIterate).ToString(), new Vector2(30, 170), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
                 _spriteBatch.DrawString(font, "iterating: " + (iterating).ToString(), new Vector2(30, 190), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(font, "fps: " + (1 / deltaTime.Elapsed.TotalSeconds).ToString("F1"), new Vector2(30, 210), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
             }
             _spriteBatch.End();
             base.Draw(gameTime);
@@ -640,6 +887,93 @@ namespace ConwayGameOfLife
             result.X = value1.X / value2.X;
             result.Y = value1.Y / value2.Y;
             return value1;
+        }
+    }
+
+    public class Vector2Int
+    {
+        public int X { get; set; }
+
+        public int Y { get; set; }
+
+        public Vector2Int()
+        {
+            X = 0;
+            Y = 0;
+        }
+
+        public Vector2Int(int _x)
+        {
+            X = _x;
+            Y = 0;
+        }
+
+        public Vector2Int(int _x, int _y)
+        {
+            X = _x;
+            Y = _y;
+        }
+
+        public static Vector2Int operator +(Vector2Int a, Vector2Int b)
+        {
+            return new Vector2Int(a.X + b.X, a.Y + b.Y);
+        }
+
+        public static Vector2Int operator -(Vector2Int a, Vector2Int b)
+        {
+            return new Vector2Int(a.X - b.X, a.Y - b.Y);
+        }
+
+        public static Vector2Int operator *(Vector2Int a, int b)
+        {
+            return new Vector2Int(a.X * b, a.Y * b);
+        }
+
+        public static Vector2Int operator *(Vector2Int a, float b)
+        {
+            return new Vector2Int((int)Math.Round(a.X * b, MidpointRounding.AwayFromZero), (int)Math.Round(a.Y * b, MidpointRounding.AwayFromZero));
+        }
+
+        public static Vector2Int operator /(Vector2Int a, int b)
+        {
+            return new Vector2Int(a.X / b, a.Y / b);
+        }
+
+        public static Vector2Int operator /(Vector2Int a, float b)
+        {
+            return new Vector2Int((int)Math.Round(a.X / b, MidpointRounding.AwayFromZero), (int)Math.Round(a.Y / b, MidpointRounding.AwayFromZero));
+        }
+
+        public static Vector2Int operator %(Vector2Int a, int b)
+        {
+            return new Vector2Int(a.X % b, a.Y % b);
+        }
+
+        public static Vector2Int operator %(Vector2Int a, float b)
+        {
+            return new Vector2Int((int)Math.Round(a.X % b, MidpointRounding.AwayFromZero), (int)Math.Round(a.Y % b, MidpointRounding.AwayFromZero));
+        }
+
+        public static readonly Vector2Int One = new Vector2Int(1, 1);
+        public static readonly Vector2Int Zero = new Vector2Int(0, 0);
+
+        public float Distance(Vector2Int b)
+        {
+            return AdvancedMath.Vector2Distance(new Vector2(X, Y), new Vector2(b.X, b.Y));
+        }
+
+        //public Vector2Int Normalize
+        //{
+        //    get
+        //    {
+        //        Vector2 temp = AdvancedMath.Normalize(new Vector2(X, Y));
+        //        return new Vector2Int((int)Math.Round(temp.X, MidpointRounding.AwayFromZero), (int)Math.Round(temp.Y, MidpointRounding.AwayFromZero));
+        //    }
+        //}
+
+        public Vector2 ToVector2()
+        {
+            return new Vector2(X, Y);
         }
     }
 }

@@ -97,5 +97,13 @@ namespace ConwayGameOfLife
         {
             return (float)Math.Sqrt(sqrMagnitude(temp));
         }
+
+        public static int GetNearestMultiple(int value, int factor)
+        {
+            return (int)Math.Round(
+                              (value / (double)factor),
+                              MidpointRounding.AwayFromZero
+                          ) * factor;
+        }
     }
 }
