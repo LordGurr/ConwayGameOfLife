@@ -12,7 +12,7 @@ namespace ConwayGameOfLife
         {
             viewport = _viewport;
             maxZoom = 5;
-            minZoom = 0.2f;
+            minZoom = 0.05f;
         }
 
         public Matrix transform { get; private set; }

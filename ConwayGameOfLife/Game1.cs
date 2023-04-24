@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 
 namespace ConwayGameOfLife
@@ -29,6 +30,10 @@ namespace ConwayGameOfLife
         private Button play;
         private Button clear;
         private Button reset;
+        private Button uncapped;
+
+        private bool updateUncapped = false;
+
         private Camera camera;
         public static Vector2 screenSize { get; private set; }
         private int tilesPåverkadeSenast = 0;
@@ -93,10 +98,14 @@ namespace ConwayGameOfLife
             play.setPos((int)Math.Round(_graphics.PreferredBackBufferWidth / 2 - next.rectangle.Width * 1.6f), _graphics.PreferredBackBufferHeight - next.rectangle.Height * 2);
             reset = new Button(new Rectangle(0, 0, 160, 40), aliveBox, "Reset");
             reset.setPos(0, 0);
+
+            uncapped = new Button(new Rectangle(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2, 160, 40), aliveBox, "Uncapped");
+            uncapped.setPos((int)Math.Round((_graphics.PreferredBackBufferWidth / 2) + uncapped.rectangle.Width * 1.7f), _graphics.PreferredBackBufferHeight - next.rectangle.Height * 2);
+
             bool addedX = false;
             int xpos = 4;
             int ypos = 10;
-            int size = 8;
+            int size = 12;
             arrayTiles = new Tile[((size * 3) / 2) * (_graphics.PreferredBackBufferWidth / widthOfSingleCollisionSquare), ((size * 3) / 2) * (_graphics.PreferredBackBufferHeight / widthOfSingleCollisionSquare)];
             for (int a = -_graphics.PreferredBackBufferHeight * (size / 2); a < _graphics.PreferredBackBufferHeight * size; a += widthOfSingleCollisionSquare)
             {
@@ -163,6 +172,7 @@ namespace ConwayGameOfLife
                     clear.setPos((int)Math.Round((Window.ClientBounds.Width / 2) + clear.rectangle.Width * 0.6f), Window.ClientBounds.Height - next.rectangle.Height * 2);
                     play.setPos((int)Math.Round(Window.ClientBounds.Width / 2 - next.rectangle.Width * 1.6f), Window.ClientBounds.Height - next.rectangle.Height * 2);
                     reset.setPos(0, 0);
+                    uncapped.setPos((int)Math.Round((_graphics.PreferredBackBufferWidth / 2) + uncapped.rectangle.Width * 1.7f), _graphics.PreferredBackBufferHeight - next.rectangle.Height * 2);
 
                     monitorSwitch = false;
                 }
@@ -183,7 +193,7 @@ namespace ConwayGameOfLife
                     drawRectPos = !drawRectPos;
                 }
                 bool buttonClicked = false;
-                if (next.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || fullscreen.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || clear.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || play.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || reset.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y))
+                if (next.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || fullscreen.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || clear.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || play.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || reset.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || uncapped.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y))
                 {
                     buttonClicked = true;
                     if (next.Clicked() && !iterating && !playing)
@@ -219,6 +229,10 @@ namespace ConwayGameOfLife
                     {
                         playing = !playing;
                     }
+                    if (uncapped.Clicked())
+                    {
+                        updateUncapped = !updateUncapped;
+                    }
                 }
                 if (Input.GetButtonDown(Keys.F11) || Input.GetButtonDown(Keys.Space) || Input.GetButtonDown(Keys.Enter))
                 {
@@ -241,7 +255,7 @@ namespace ConwayGameOfLife
                         StartThreadIterate();
                     }
                 }
-                if (playing && timeSinceIteration.Elapsed.TotalSeconds > timeForIterate && !iterating)
+                if (playing && !iterating && (timeSinceIteration.Elapsed.TotalSeconds > timeForIterate || updateUncapped))
                 {
                     StartThreadIterate();
                 }
@@ -339,6 +353,25 @@ namespace ConwayGameOfLife
                         {
                             Debug.WriteLine(e.Message);
                             string temp = e.Message;
+                        }
+                    }
+                    if (Input.GetButtonDown(Keys.End))
+                    {
+                        for (int i = 0; i < knapparna.Count; i++)
+                        {
+                            //List<Tile> rutorBredvid = tilesBredvid(tilesPåverkade[i]);
+                            knapparna[i].SetAlive(3);
+                            knapparna[i].UpdateAlive();
+                        }
+                    }
+                    if (Input.GetButtonDown(Keys.Insert))
+                    {
+                        Random rng = new Random();
+                        for (int i = 0; i < knapparna.Count; i++)
+                        {
+                            //List<Tile> rutorBredvid = tilesBredvid(tilesPåverkade[i]);
+                            knapparna[i].SetAlive(rng.Next(10) == 0 ? 3 : 0);
+                            knapparna[i].UpdateAlive();
                         }
                     }
                 }
@@ -756,28 +789,48 @@ namespace ConwayGameOfLife
             DrawButtons();
             if (debugging)
             {
-                for (int i = 0; i < knapparna.Count; i++)
-                {
-                    _spriteBatch.DrawString(font, "i:" + i, new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 3), Color.Black);
-                }
+                //for (int i = 0; i < knapparna.Count; i++)
+                //{
+                //    _spriteBatch.DrawString(font, "i:" + i, new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 3), Color.Black);
+                //}
                 if (drawRectPos)
                 {
-                    for (int i = 0; i < knapparna.Count; i++)
+                    for (int x = Math.Max(tilesOnScreen.X, 0); x < Math.Min(tilesOnScreen.Width, arrayTiles.GetLength(0)); x++)
                     {
-                        _spriteBatch.DrawString(font, "pos:", new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 13), Color.Black);
-                        _spriteBatch.DrawString(font, knapparna[i].rectangle.X.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 29), Color.Black);
-                        _spriteBatch.DrawString(font, knapparna[i].rectangle.Y.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 42), Color.Black);
+                        for (int y = Math.Max(tilesOnScreen.Y, 0); y < Math.Min(tilesOnScreen.Height, arrayTiles.GetLength(1)); y++)
+                        {
+                            _spriteBatch.DrawString(font, "pos:", new Vector2(arrayTiles[x, y].rectangle.Left + 5, arrayTiles[x, y].rectangle.Top + 13), Color.Black);
+                            _spriteBatch.DrawString(font, arrayTiles[x, y].rectangle.X.ToString(), new Vector2(arrayTiles[x, y].rectangle.Left + 5, arrayTiles[x, y].rectangle.Top + 29), Color.Black);
+                            _spriteBatch.DrawString(font, arrayTiles[x, y].rectangle.Y.ToString(), new Vector2(arrayTiles[x, y].rectangle.Left + 5, arrayTiles[x, y].rectangle.Top + 42), Color.Black);
+                        }
                     }
+                    //for (int i = 0; i < knapparna.Count; i++)
+                    //{
+                    //    _spriteBatch.DrawString(font, "pos:", new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 13), Color.Black);
+                    //    _spriteBatch.DrawString(font, knapparna[i].rectangle.X.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 29), Color.Black);
+                    //    _spriteBatch.DrawString(font, knapparna[i].rectangle.Y.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 42), Color.Black);
+                    //}
                 }
                 else
                 {
-                    for (int i = 0; i < knapparna.Count; i++)
+                    for (int x = Math.Max(tilesOnScreen.X, 0); x < Math.Min(tilesOnScreen.Width, arrayTiles.GetLength(0)); x++)
                     {
-                        _spriteBatch.DrawString(font, "pos:", new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 13), Color.Black);
-                        _spriteBatch.DrawString(font, knapparna[i].xpos.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 29), Color.Black);
-                        _spriteBatch.DrawString(font, knapparna[i].ypos.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 42), Color.Black);
-                        //_spriteBatch.DrawString(font, "pos:" + knapparna[i].xpos.ToString() + "," + knapparna[i].ypos.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 13), Color.Black);
+                        for (int y = Math.Max(tilesOnScreen.Y, 0); y < Math.Min(tilesOnScreen.Height, arrayTiles.GetLength(1)); y++)
+                        {
+                            _spriteBatch.DrawString(font, "pos:", new Vector2(arrayTiles[x, y].rectangle.Left + 5, arrayTiles[x, y].rectangle.Top + 13), Color.Black);
+                            _spriteBatch.DrawString(font, arrayTiles[x, y].xpos.ToString(), new Vector2(arrayTiles[x, y].rectangle.Left + 5, arrayTiles[x, y].rectangle.Top + 29), Color.Black);
+                            _spriteBatch.DrawString(font, arrayTiles[x, y].ypos.ToString(), new Vector2(arrayTiles[x, y].rectangle.Left + 5, arrayTiles[x, y].rectangle.Top + 42), Color.Black);
+                            //_spriteBatch.DrawString(font, "pos:" + knapparna[i].xpos.ToString() + "," + knapparna[i].ypos.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 13), Color.Black);
+                        }
                     }
+
+                    //for (int i = 0; i < knapparna.Count; i++)
+                    //{
+                    //    _spriteBatch.DrawString(font, "pos:", new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 13), Color.Black);
+                    //    _spriteBatch.DrawString(font, knapparna[i].xpos.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 29), Color.Black);
+                    //    _spriteBatch.DrawString(font, knapparna[i].ypos.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 42), Color.Black);
+                    //    //_spriteBatch.DrawString(font, "pos:" + knapparna[i].xpos.ToString() + "," + knapparna[i].ypos.ToString(), new Vector2(knapparna[i].rectangle.Left + 5, knapparna[i].rectangle.Top + 13), Color.Black);
+                    //}
                 }
             }
             Vector3 cameraPos = camera.transform.Translation;
@@ -789,6 +842,7 @@ namespace ConwayGameOfLife
             play.Draw(_spriteBatch, font);
             clear.Draw(_spriteBatch, font);
             reset.Draw(_spriteBatch, font);
+            uncapped.Draw(_spriteBatch, font);
             if (debugging)
             {
                 float size = 1.6f;
