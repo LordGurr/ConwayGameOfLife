@@ -27,10 +27,15 @@ namespace ConwayGameOfLife
         private static int minScrollWheel;
         private static int maxScrollWheel;
 
+        private static Camera myCamera;
+        public static Vector2 myWorldMousePos { private set; get; }
+        public static Vector2 myMousePos { private set; get; }
+
         public static void setCameraStuff(Camera camera)
         {
             maxScrollWheel = (int)Math.Round((camera.maxZoom - 1) / 0.001f);
             minScrollWheel = (int)Math.Round((camera.minZoom - 1) / 0.001f);
+            myCamera = camera;
         }
 
         public static KeyboardState GetState()
@@ -70,6 +75,10 @@ namespace ConwayGameOfLife
             directional += new Vector2(GetButton(Keys.Right) || GetButton(Keys.D) ? 1 : 0, 0);
             directional = new Vector2(Math.Clamp(directional.X, -1, 1), Math.Clamp(directional.Y, -1, 1));
             normalizedDirectional = AdvancedMath.ClampMagnitude(directional, 1);
+            myMousePos = new Vector2(currentMouseState.Position.X, currentMouseState.Position.Y);
+
+            myWorldMousePos = myCamera.ScreenToWorldSpace(MousePos());
+
             return currentKeyState;
         }
 

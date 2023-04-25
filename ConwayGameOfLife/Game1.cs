@@ -63,7 +63,7 @@ namespace ConwayGameOfLife
             camera = new Camera(new Viewport(new Rectangle(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight)));
             screenSize = new Vector2(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
             position = new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
-            previousMousePos = camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y));
+            previousMousePos = camera.ScreenToWorldSpace(Input.myWorldMousePos);
             timeSinceIteration = new Stopwatch();
             timeTakenToIterate = new Stopwatch();
             timeSinceIteration.Start();
@@ -193,7 +193,7 @@ namespace ConwayGameOfLife
                     drawRectPos = !drawRectPos;
                 }
                 bool buttonClicked = false;
-                if (next.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || fullscreen.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || clear.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || play.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || reset.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y) || uncapped.rectangle.Contains(Mouse.GetState().X, Mouse.GetState().Y))
+                if (next.rectangle.Contains(Input.myMousePos) || fullscreen.rectangle.Contains(Input.myMousePos) || clear.rectangle.Contains(Input.myMousePos) || play.rectangle.Contains(Input.myMousePos) || reset.rectangle.Contains(Input.myMousePos) || uncapped.rectangle.Contains(Input.myMousePos))
                 {
                     buttonClicked = true;
                     if (next.Clicked() && !iterating && !playing)
@@ -254,10 +254,6 @@ namespace ConwayGameOfLife
                     {
                         StartThreadIterate();
                     }
-                }
-                if (playing && !iterating && (timeSinceIteration.Elapsed.TotalSeconds > timeForIterate || updateUncapped))
-                {
-                    StartThreadIterate();
                 }
                 if (Input.GetButton(Keys.Up))
                 {
@@ -342,9 +338,9 @@ namespace ConwayGameOfLife
                             {
                                 for (int y = Math.Max(tilesOnScreen.Y, 0); y < Math.Min(tilesOnScreen.Height, arrayTiles.GetLength(1)); y++)
                                 {
-                                    if (arrayTiles[x, y].alive != Input.mouseClickingToAlive)
+                                    if (arrayTiles[x, y].alive != Input.mouseClickingToAlive && arrayTiles[x, y].rectangle.Contains(Input.myWorldMousePos))
                                     {
-                                        arrayTiles[x, y].Clicked(camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)));
+                                        arrayTiles[x, y].Clicked(Input.myWorldMousePos);
                                     }
                                 }
                             }
@@ -370,18 +366,22 @@ namespace ConwayGameOfLife
                         for (int i = 0; i < knapparna.Count; i++)
                         {
                             //List<Tile> rutorBredvid = tilesBredvid(tilesPåverkade[i]);
-                            knapparna[i].SetAlive(rng.Next(10) == 0 ? 3 : 0);
+                            knapparna[i].SetAlive(rng.Next(2) == 0 ? 3 : 0);
                             knapparna[i].UpdateAlive();
                         }
                     }
                 }
-                base.Update(gameTime);
             }
             else
             {
-                Input.GetState();
+                //Input.GetState();
                 lastMousePosition = Input.MousePos();
             }
+            if (playing && !iterating && (timeSinceIteration.Elapsed.TotalSeconds > timeForIterate || updateUncapped))
+            {
+                StartThreadIterate();
+            }
+            base.Update(gameTime);
         }
 
         private Vector2 lastMousePosition;
