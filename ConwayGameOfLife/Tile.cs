@@ -68,6 +68,19 @@ namespace ConwayGameOfLife
             return false;
         }
 
+        public void SetClicked()
+        {
+            alive = Input.mouseClickingToAlive;
+            if (alive)
+            {
+                Texture = aliveTex;
+            }
+            else
+            {
+                Texture = deadTex;
+            }
+        }
+
         public void SetAlive(bool _alive)
         {
             if (_alive)

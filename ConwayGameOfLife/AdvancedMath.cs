@@ -102,7 +102,7 @@ namespace ConwayGameOfLife
         {
             return (int)Math.Round(
                               (value / (double)factor),
-                              MidpointRounding.AwayFromZero
+                              MidpointRounding.ToPositiveInfinity
                           ) * factor;
         }
     }

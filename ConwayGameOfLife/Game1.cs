@@ -51,6 +51,9 @@ namespace ConwayGameOfLife
 
         private bool drawRectPos = true;
 
+        private Vector2Int currentMouseScaled = new Vector2Int(0, 0);
+        private Vector2Int previousMouseScaled = new Vector2Int(0, 0);
+
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -105,7 +108,7 @@ namespace ConwayGameOfLife
             bool addedX = false;
             int xpos = 4;
             int ypos = 10;
-            int size = 12;
+            int size = 16;
             arrayTiles = new Tile[((size * 3) / 2) * (_graphics.PreferredBackBufferWidth / widthOfSingleCollisionSquare), ((size * 3) / 2) * (_graphics.PreferredBackBufferHeight / widthOfSingleCollisionSquare)];
             for (int a = -_graphics.PreferredBackBufferHeight * (size / 2); a < _graphics.PreferredBackBufferHeight * size; a += widthOfSingleCollisionSquare)
             {
@@ -145,6 +148,9 @@ namespace ConwayGameOfLife
             deltaTime.Restart();
             if (IsActive)
             {
+                if (Input.GetButtonDown(Keys.A))
+                {
+                }
                 Vector2 topLeft = (camera.ScreenToWorldSpace(Vector2.Zero));
                 Vector2 bottomRight = camera.ScreenToWorldSpace(new Vector2(camera.viewport.Width, camera.viewport.Height));
                 Vector2Int topLeftScaled = new Vector2Int(AdvancedMath.GetNearestMultiple((int)topLeft.X, widthOfSingleCollisionSquare), AdvancedMath.GetNearestMultiple((int)topLeft.Y, widthOfSingleCollisionSquare));
@@ -161,6 +167,14 @@ namespace ConwayGameOfLife
                 tilesOnScreen = new Rectangle((int)topLeft.X, (int)topLeft.Y, (int)topLeft.X + (int)bottomRight.X, (int)topLeft.Y + (int)bottomRight.Y);
                 tilesOnScreen = new Rectangle((int)topLeftScaled.X - 1, (int)topLeftScaled.Y - 1, /*(int)topLeftScaled.X +*/ (int)bottomRightScaled.X + 1, /*(int)topLeftScaled.Y +*/ (int)bottomRightScaled.Y + 1);
 
+                //currentMouseScaled = new Vector2Int(Input.myWorldMousePos - (new Vector2(widthOfSingleCollisionSquare) / 2);
+                currentMouseScaled = new Vector2Int(AdvancedMath.GetNearestMultiple((int)Input.myWorldMousePos.X, widthOfSingleCollisionSquare), AdvancedMath.GetNearestMultiple((int)Input.myWorldMousePos.Y, widthOfSingleCollisionSquare));
+                currentMouseScaled -= new Vector2Int(arrayTiles[0, 0].rectangle.X, arrayTiles[0, 0].rectangle.Y);
+                currentMouseScaled /= widthOfSingleCollisionSquare;
+                currentMouseScaled -= new Vector2Int(1);
+
+                Rectangle mouseRect = new Rectangle(currentMouseScaled.X - 2, currentMouseScaled.Y - 2, currentMouseScaled.X + 2, currentMouseScaled.Y + 2);
+
                 if (monitorSwitch)
                 {
                     if (Window.ClientBounds.Width > 1)
@@ -172,7 +186,7 @@ namespace ConwayGameOfLife
                     clear.setPos((int)Math.Round((Window.ClientBounds.Width / 2) + clear.rectangle.Width * 0.6f), Window.ClientBounds.Height - next.rectangle.Height * 2);
                     play.setPos((int)Math.Round(Window.ClientBounds.Width / 2 - next.rectangle.Width * 1.6f), Window.ClientBounds.Height - next.rectangle.Height * 2);
                     reset.setPos(0, 0);
-                    uncapped.setPos((int)Math.Round((_graphics.PreferredBackBufferWidth / 2) + uncapped.rectangle.Width * 1.7f), _graphics.PreferredBackBufferHeight - next.rectangle.Height * 2);
+                    uncapped.setPos((int)Math.Round(Window.ClientBounds.Width / 2 + next.rectangle.Width * 1.7f), Window.ClientBounds.Height - next.rectangle.Height * 2);
 
                     monitorSwitch = false;
                 }
@@ -334,15 +348,54 @@ namespace ConwayGameOfLife
                                 tilesToCheck[i].Clicked(camera.ScreenToWorldSpace(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)));
                             }*/
 
-                            for (int x = Math.Max(tilesOnScreen.X, 0); x < Math.Min(tilesOnScreen.Width, arrayTiles.GetLength(0)); x++)
+                            //for (int x = Math.Max(tilesOnScreen.X, 0); x < Math.Min(tilesOnScreen.Width, arrayTiles.GetLength(0)); x++)
+                            //for (int x = Math.Max(mouseRect.X, 0); x < Math.Min(mouseRect.Width, arrayTiles.GetLength(0)); x++)
+                            //{
+                            //    //for (int y = Math.Max(tilesOnScreen.Y, 0); y < Math.Min(tilesOnScreen.Height, arrayTiles.GetLength(1)); y++)
+                            //    for (int y = Math.Max(mouseRect.Y, 0); y < Math.Min(mouseRect.Height, arrayTiles.GetLength(1)); y++)
+                            //    {
+                            //        if (arrayTiles[x, y].alive != Input.mouseClickingToAlive && arrayTiles[x, y].rectangle.Contains(Input.myWorldMousePos))
+                            //        {
+                            //            arrayTiles[x, y].Clicked(Input.myWorldMousePos);
+                            //        }
+                            //    }
+                            //}
+                            if (currentMouseScaled.X != previousMouseScaled.X && currentMouseScaled.Y != previousMouseScaled.Y)
                             {
-                                for (int y = Math.Max(tilesOnScreen.Y, 0); y < Math.Min(tilesOnScreen.Height, arrayTiles.GetLength(1)); y++)
-                                {
-                                    if (arrayTiles[x, y].alive != Input.mouseClickingToAlive && arrayTiles[x, y].rectangle.Contains(Input.myWorldMousePos))
-                                    {
-                                        arrayTiles[x, y].Clicked(Input.myWorldMousePos);
-                                    }
-                                }
+                            }
+                            //List<Vector2Int> positionsChecked = new List<Vector2Int>();
+                            foreach (Vector2Int item in line(new Vector2Int(currentMouseScaled.X, currentMouseScaled.Y), new Vector2Int(previousMouseScaled.X, previousMouseScaled.Y)))
+                            {
+                                //for (int i = 0; i < Directions.Length; i++)
+                                //{
+                                //    Vector2Int temp = item + Directions[i];
+                                //    Tile tile = GetTileFromPosNew(temp);
+                                //    //if (/*!positionsChecked.Any(o => o.X == temp.X && o.Y == temp.Y) &&*/ tile.alive != Input.mouseClickingToAlive && tile.rectangle.Contains(Input.myWorldMousePos))
+                                //    //{
+                                //    //    tile.Clicked(Input.myWorldMousePos);
+                                //    //}
+                                //    //positionsChecked.Add(temp);
+                                //    tile.SetClicked();
+                                //}
+                                //for (int i = 0; i < DiagonalDirections.Length; i++)
+                                //{
+                                //    Vector2Int temp = item + DiagonalDirections[i];
+                                //    Tile tile = GetTileFromPosNew(temp);
+                                //    //if (/*!positionsChecked.Any(o => o.X == temp.X && o.Y == temp.Y) &&*/ tile.alive != Input.mouseClickingToAlive && tile.rectangle.Contains(Input.myWorldMousePos))
+                                //    //{
+                                //    //    tile.Clicked(Input.myWorldMousePos);
+                                //    //}
+                                //    //positionsChecked.Add(temp);
+                                //    tile.SetClicked();
+
+                                //}
+                                Tile tile2 = GetTileFromPosNew(item);
+                                tile2.SetClicked();
+                                //if (/*!positionsChecked.Any(o => o.X == item.X && o.Y == item.Y) &&*/ tile2.alive != Input.mouseClickingToAlive && tile2.rectangle.Contains(Input.myWorldMousePos))
+                                //{
+                                //    tile2.Clicked(Input.myWorldMousePos);
+                                //}
+                                //positionsChecked.Add(item);
                             }
                         }
                         catch (Exception e)
@@ -366,7 +419,7 @@ namespace ConwayGameOfLife
                         for (int i = 0; i < knapparna.Count; i++)
                         {
                             //List<Tile> rutorBredvid = tilesBredvid(tilesPåverkade[i]);
-                            knapparna[i].SetAlive(rng.Next(2) == 0 ? 3 : 0);
+                            knapparna[i].SetAlive(rng.Next(5) == 0 ? 3 : 0);
                             knapparna[i].UpdateAlive();
                         }
                     }
@@ -381,6 +434,7 @@ namespace ConwayGameOfLife
             {
                 StartThreadIterate();
             }
+            previousMouseScaled = currentMouseScaled;
             base.Update(gameTime);
         }
 
@@ -526,6 +580,43 @@ namespace ConwayGameOfLife
             //    iterating = false;
             //    timeTakenToIterate.Stop();
             //}
+        }
+
+        private IEnumerable<Vector2Int> line(Vector2Int a, Vector2Int b/*, int color*/)
+        {
+            int w = b.X - a.X;
+            int h = b.Y - a.Y;
+            int dx1 = 0, dy1 = 0, dx2 = 0, dy2 = 0;
+            if (w < 0) dx1 = -1; else if (w > 0) dx1 = 1;
+            if (h < 0) dy1 = -1; else if (h > 0) dy1 = 1;
+            if (w < 0) dx2 = -1; else if (w > 0) dx2 = 1;
+            int longest = Math.Abs(w);
+            int shortest = Math.Abs(h);
+            if (!(longest > shortest))
+            {
+                longest = Math.Abs(h);
+                shortest = Math.Abs(w);
+                if (h < 0) dy2 = -1; else if (h > 0) dy2 = 1;
+                dx2 = 0;
+            }
+            int numerator = longest >> 1;
+            for (int i = 0; i <= longest; i++)
+            {
+                //putpixel(x, y, color);
+                yield return (new Vector2Int(a.X, a.Y));
+                numerator += shortest;
+                if (!(numerator < longest))
+                {
+                    numerator -= longest;
+                    a.X += dx1;
+                    a.Y += dy1;
+                }
+                else
+                {
+                    a.X += dx2;
+                    a.Y += dy2;
+                }
+            }
         }
 
         private void IterateThread()
@@ -843,9 +934,10 @@ namespace ConwayGameOfLife
             clear.Draw(_spriteBatch, font);
             reset.Draw(_spriteBatch, font);
             uncapped.Draw(_spriteBatch, font);
+            float size = 1.6f;
+
             if (debugging)
             {
-                float size = 1.6f;
                 int lines = 9;
                 Rectangle background = new Rectangle(0, 40, 450, 20 * (lines + 2));
                 _spriteBatch.Draw(aliveBox, background, Color.White);
@@ -862,6 +954,12 @@ namespace ConwayGameOfLife
                 _spriteBatch.DrawString(font, "timeforiterate: " + (timeForIterate).ToString(), new Vector2(30, 170), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
                 _spriteBatch.DrawString(font, "iterating: " + (iterating).ToString(), new Vector2(30, 190), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
                 _spriteBatch.DrawString(font, "fps: " + (1 / deltaTime.Elapsed.TotalSeconds).ToString("F1"), new Vector2(30, 210), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+            }
+            else
+            {
+                _spriteBatch.DrawString(font, "position: " + currentMouseScaled.ToString(), new Vector2(30, 50), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(font, "prev: " + previousMouseScaled.ToString(), new Vector2(30, 70), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(font, "fps: " + (1 / deltaTime.Elapsed.TotalSeconds).ToString("F1"), new Vector2(30, 90), Color.Red, 0, new Vector2(), size, SpriteEffects.None, 0);
             }
             _spriteBatch.End();
             base.Draw(gameTime);
@@ -956,16 +1054,22 @@ namespace ConwayGameOfLife
             Y = 0;
         }
 
-        public Vector2Int(int _x)
+        public Vector2Int(int a)
         {
-            X = _x;
-            Y = 0;
+            X = a;
+            Y = a;
         }
 
         public Vector2Int(int _x, int _y)
         {
             X = _x;
             Y = _y;
+        }
+
+        public Vector2Int(Vector2 vector2)
+        {
+            X = (int)vector2.X;
+            Y = (int)vector2.X;
         }
 
         public static Vector2Int operator +(Vector2Int a, Vector2Int b)
@@ -1028,6 +1132,11 @@ namespace ConwayGameOfLife
         public Vector2 ToVector2()
         {
             return new Vector2(X, Y);
+        }
+
+        public override string ToString()
+        {
+            return "{" + X + "," + Y + "}";
         }
     }
 }
